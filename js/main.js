@@ -1,11 +1,16 @@
 // main.js
-// App bootstrap: start screen -> editor screen, wires state + render + gestures + ui.
+// App bootstrap: boots straight into the editor (default 4 photos / 1:1),
+// silently resuming from autosave if one exists. Wires state + render +
+// gestures + ui.
 
 import { AppState, createDefaultState, imageRegistry } from "./state.js";
 import { canvasPixelSize } from "./layout.js";
 import { renderCanvas } from "./render.js";
 import { attachGestures } from "./gestures.js";
-import { initStartScreen, initEditor, requestPhotoForSlot, openTextEditor, assignFilesToSlots } from "./ui.js";
+import { initEditor, requestPhotoForSlot, openTextEditor } from "./ui.js";
+
+const DEFAULT_PHOTO_COUNT = 4;
+const DEFAULT_RATIO_ID = "1:1";
 
 const startScreen = document.getElementById("startScreen");
 const editorScreen = document.getElementById("editorScreen");
@@ -40,19 +45,22 @@ function goToEditor() {
   editorScreen.hidden = false;
 }
 
-async function startFresh(count, ratioId) {
+function startFresh(count, ratioId) {
   state = new AppState(createDefaultState(count, ratioId));
   goToEditor();
   bootEditor();
 }
 
+/** Boots the editor immediately (no blank/loading screen), then hydrates
+ *  any autosaved photos in the background and re-renders once ready. */
 async function resumeFromAutosave() {
   const data = AppState.loadAutosave();
-  if (!data) return startFresh(4, "1:1");
-  await hydrateImagesForState(data);
+  if (!data) return startFresh(DEFAULT_PHOTO_COUNT, DEFAULT_RATIO_ID);
   state = new AppState(data);
   goToEditor();
   bootEditor();
+  await hydrateImagesForState(data);
+  requestRender();
 }
 
 function bootEditor() {
@@ -74,9 +82,8 @@ function bootEditor() {
   window.addEventListener("resize", requestRender);
 }
 
-const hasAutosave = !!AppState.loadAutosave();
-initStartScreen({
-  hasAutosave,
-  onStart: (count, ratioId) => startFresh(count, ratioId),
-  onResume: () => resumeFromAutosave(),
-});
+if (AppState.loadAutosave()) {
+  resumeFromAutosave();
+} else {
+  startFresh(DEFAULT_PHOTO_COUNT, DEFAULT_RATIO_ID);
+}
