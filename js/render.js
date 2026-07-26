@@ -1,0 +1,197 @@
+// render.js
+// Pure(ish) canvas drawing. Given a 2d context, the app state, and the
+// canvas pixel size, draws the full composition: background, photo cells
+// (clipped/rounded, with frame), and text layers (with drop shadow).
+// Also exposes geometry helpers shared with gestures.js for hit-testing.
+
+import { computeLayout, roundedRectPath } from "./layout.js";
+import { imageRegistry } from "./state.js";
+
+export function getCellRects(state, canvasW, canvasH) {
+  return computeLayout(state.photoCount, canvasW, canvasH, state.spacing);
+}
+
+export function coverBaseScale(cellW, cellH, naturalW, naturalH) {
+  return Math.max(cellW / naturalW, cellH / naturalH);
+}
+
+/** Build the canvas font string for a text object. */
+function fontString(t) {
+  const parts = [];
+  if (t.italic) parts.push("italic");
+  if (t.bold) parts.push("bold");
+  parts.push(`${t.size}px`);
+  parts.push(t.font);
+  return parts.join(" ");
+}
+
+function measureLineWidth(ctx, line, letterSpacing) {
+  if (line.length === 0) return 0;
+  let w = 0;
+  for (const ch of line) w += ctx.measureText(ch).width + letterSpacing;
+  return w - letterSpacing;
+}
+
+/** Returns an (unrotated, local-space) bounding box {w,h} for a text object. */
+export function textLocalBounds(ctx, t) {
+  ctx.save();
+  ctx.font = fontString(t);
+  const lines = (t.content || "").split("\n");
+  let maxW = 0;
+  for (const line of lines) maxW = Math.max(maxW, measureLineWidth(ctx, line, t.letterSpacing));
+  const h = lines.length * t.size * t.lineHeight;
+  ctx.restore();
+  return { w: maxW, h, lines };
+}
+
+function drawTextObject(ctx, t) {
+  if (!t.content) return;
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, t.opacity / 100));
+  ctx.translate(t.x, t.y);
+  ctx.rotate((t.rotation * Math.PI) / 180);
+  ctx.font = fontString(t);
+  ctx.textBaseline = "middle";
+
+  const { w: maxW, h: totalH, lines } = textLocalBounds(ctx, t);
+
+  if (t.shadow && t.shadow.enabled) {
+    const rad = (t.shadow.angle * Math.PI) / 180;
+    ctx.shadowOffsetX = Math.cos(rad) * t.shadow.distance;
+    ctx.shadowOffsetY = Math.sin(rad) * t.shadow.distance;
+    ctx.shadowBlur = t.shadow.blur;
+    ctx.shadowColor = hexToRgba(t.shadow.color, t.shadow.opacity / 100);
+  }
+
+  ctx.fillStyle = t.color;
+
+  const startY = -((lines.length - 1) * t.size * t.lineHeight) / 2;
+
+  lines.forEach((line, i) => {
+    const lineW = measureLineWidth(ctx, line, t.letterSpacing);
+    let startX;
+    if (t.align === "left") startX = -maxW / 2;
+    else if (t.align === "right") startX = maxW / 2 - lineW;
+    else startX = -lineW / 2;
+
+    let cx = startX;
+    const y = startY + i * t.size * t.lineHeight;
+    for (const ch of line) {
+      ctx.fillText(ch, cx, y);
+      cx += ctx.measureText(ch).width + t.letterSpacing;
+    }
+  });
+
+  ctx.restore();
+}
+
+function hexToRgba(hex, alpha) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || "#000000");
+  if (!m) return `rgba(0,0,0,${alpha})`;
+  const r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function drawPhotoInCell(ctx, cell, photo, cornerRadius) {
+  const entry = photo ? imageRegistry.get(photo.imgId) : null;
+
+  ctx.save();
+  roundedRectPath(ctx, cell.x, cell.y, cell.w, cell.h, cornerRadius);
+  ctx.clip();
+
+  if (entry) {
+    const baseScale = coverBaseScale(cell.w, cell.h, entry.naturalW, entry.naturalH);
+    const totalScale = baseScale * (photo.scale || 1);
+    ctx.translate(cell.x + cell.w / 2 + (photo.offsetX || 0), cell.y + cell.h / 2 + (photo.offsetY || 0));
+    ctx.rotate(((photo.rotation || 0) * Math.PI) / 180);
+    ctx.scale(totalScale, totalScale);
+    ctx.drawImage(entry.img, -entry.naturalW / 2, -entry.naturalH / 2, entry.naturalW, entry.naturalH);
+  } else {
+    ctx.fillStyle = "rgba(128,128,128,0.14)";
+    ctx.fillRect(cell.x, cell.y, cell.w, cell.h);
+  }
+  ctx.restore();
+
+  if (!entry) {
+    ctx.save();
+    roundedRectPath(ctx, cell.x, cell.y, cell.w, cell.h, cornerRadius);
+    ctx.setLineDash([8, 6]);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(128,128,128,0.5)";
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(128,128,128,0.6)";
+    ctx.font = `${Math.max(20, Math.min(cell.w, cell.h) * 0.25)}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("+", cell.x + cell.w / 2, cell.y + cell.h / 2);
+    ctx.restore();
+  }
+}
+
+function drawFrame(ctx, cell, frame, cornerRadius) {
+  if (!frame.enabled || frame.thickness <= 0) return;
+  ctx.save();
+  roundedRectPath(ctx, cell.x, cell.y, cell.w, cell.h, cornerRadius);
+  ctx.lineWidth = frame.thickness;
+  ctx.strokeStyle = frame.color;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawSelectionOutline(ctx, rect, rotation = 0) {
+  ctx.save();
+  if (rotation) {
+    ctx.translate(rect.x + rect.w / 2, rect.y + rect.h / 2);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.translate(-(rect.x + rect.w / 2), -(rect.y + rect.h / 2));
+  }
+  ctx.setLineDash([6, 4]);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#4f8cff";
+  ctx.strokeRect(rect.x - 3, rect.y - 3, rect.w + 6, rect.h + 6);
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+/**
+ * Main draw entry point.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {object} state (state.data)
+ * @param {number} canvasW
+ * @param {number} canvasH
+ * @param {object} opts { forExport?: boolean }
+ */
+export function renderCanvas(ctx, state, canvasW, canvasH, opts = {}) {
+  const forExport = !!opts.forExport;
+  ctx.clearRect(0, 0, canvasW, canvasH);
+  ctx.fillStyle = state.bgColor;
+  ctx.fillRect(0, 0, canvasW, canvasH);
+
+  const cells = getCellRects(state, canvasW, canvasH);
+
+  cells.forEach((cell, i) => {
+    const photo = state.photos[i];
+    drawPhotoInCell(ctx, cell, photo, state.cornerRadius);
+    drawFrame(ctx, cell, state.frame, state.cornerRadius);
+  });
+
+  for (const t of state.texts) {
+    drawTextObject(ctx, t);
+  }
+
+  if (!forExport && state.selection) {
+    if (state.selection.type === "photo") {
+      const cell = cells[state.selection.index];
+      if (cell) drawSelectionOutline(ctx, cell, 0);
+    } else if (state.selection.type === "text") {
+      const t = state.texts.find((x) => x.id === state.selection.id);
+      if (t) {
+        const { w, h } = textLocalBounds(ctx, t);
+        drawSelectionOutline(ctx, { x: t.x - w / 2, y: t.y - h / 2, w, h }, t.rotation);
+      }
+    }
+  }
+
+  return cells;
+}

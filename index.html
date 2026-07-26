@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Collage</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===== 起動画面: 枚数 & キャンバスサイズ選択 ===== -->
+<div id="startScreen" class="screen">
+  <div class="start-card">
+    <h1>Collage</h1>
+    <p class="sub">写真の枚数とキャンバスサイズを選んで開始</p>
+
+    <div class="field">
+      <label>写真の枚数</label>
+      <div id="countPicker" class="chip-row"></div>
+    </div>
+
+    <div class="field">
+      <label>キャンバスサイズ</label>
+      <div id="ratioPicker" class="chip-row"></div>
+    </div>
+
+    <button id="startBtn" class="primary-btn">作成をはじめる</button>
+    <button id="resumeBtn" class="ghost-btn" hidden>前回の続きから再開する</button>
+  </div>
+</div>
+
+<!-- ===== エディタ画面 ===== -->
+<div id="editorScreen" class="screen" hidden>
+
+  <header class="topbar">
+    <button id="undoBtn" class="icon-btn" title="元に戻す">↶</button>
+    <button id="redoBtn" class="icon-btn" title="やり直す">↷</button>
+    <div class="topbar-spacer"></div>
+    <button id="templateBtn" class="icon-btn" title="テンプレート">🗂</button>
+    <button id="exportBtn" class="primary-btn small">書き出す</button>
+  </header>
+
+  <main class="editor-main">
+    <div class="canvas-wrap">
+      <canvas id="mainCanvas"></canvas>
+    </div>
+  </main>
+
+  <!-- テキスト編集モーダル(常に画面中央・確実に閉じられる) -->
+  <div id="textEditOverlay" class="modal" hidden>
+    <div class="modal-card">
+      <div class="text-edit-header">
+        <h2>テキストを編集</h2>
+        <button id="textEditClose" class="icon-btn" title="閉じる">✕</button>
+      </div>
+      <textarea id="textEditArea" placeholder="テキストを入力" rows="4"></textarea>
+      <button id="textEditDone" class="primary-btn">完了</button>
+    </div>
+  </div>
+
+  <!-- 下部ツールバー(常時表示・タブ切替) -->
+  <nav class="bottom-tabs">
+    <button class="tab-btn active" data-panel="panel-photos">写真</button>
+    <button class="tab-btn" data-panel="panel-layout">レイアウト</button>
+    <button class="tab-btn" data-panel="panel-text">テキスト</button>
+    <button class="tab-btn" data-panel="panel-selected">選択中</button>
+  </nav>
+
+  <section class="bottom-sheet">
+
+    <div id="panel-photos" class="panel active">
+      <div class="row-scroll" id="photoTray"></div>
+      <button id="addPhotoBtn" class="secondary-btn">＋ 写真を追加</button>
+      <input type="file" id="fileInput" accept="image/*" multiple hidden>
+    </div>
+
+    <div id="panel-layout" class="panel">
+      <div class="field-row">
+        <label>枚数</label>
+        <div id="countPickerEditor" class="chip-row small"></div>
+      </div>
+      <div class="field-row">
+        <label>キャンバス比率</label>
+        <div id="ratioPickerEditor" class="chip-row small"></div>
+      </div>
+      <div class="field-row">
+        <label>背景</label>
+        <div class="bg-swatches">
+          <button class="swatch white" data-bg="#FFFFFF" title="白"></button>
+          <button class="swatch black" data-bg="#000000" title="黒"></button>
+          <input type="color" id="bgColorPicker" value="#ffffff" title="任意カラー">
+        </div>
+      </div>
+      <div class="field-row">
+        <label>写真間隔 <span id="spacingVal">8</span>px</label>
+        <input type="range" id="spacingSlider" min="0" max="50" value="8">
+      </div>
+      <div class="field-row">
+        <label>角丸 <span id="radiusVal">0</span>px</label>
+        <input type="range" id="radiusSlider" min="0" max="40" value="0">
+      </div>
+      <div class="field-row">
+        <label>フレーム<input type="checkbox" id="frameToggle" checked></label>
+      </div>
+      <div class="field-row">
+        <label>太さ <span id="frameWidthVal">4</span>px</label>
+        <input type="range" id="frameWidthSlider" min="0" max="30" value="4">
+      </div>
+      <div class="field-row">
+        <label>フレーム色</label>
+        <input type="color" id="frameColorPicker" value="#ffffff">
+      </div>
+    </div>
+
+    <div id="panel-text" class="panel">
+      <button id="addTextBtn" class="secondary-btn">＋ テキストを追加</button>
+      <div id="textList" class="row-scroll"></div>
+    </div>
+
+    <div id="panel-selected" class="panel">
+      <div id="noSelection" class="hint">写真またはテキストをタップして選択してください</div>
+
+      <div id="photoProps" class="props" hidden>
+        <div class="field-row">
+          <label>回転 <span id="photoRotVal">0</span>°</label>
+          <input type="range" id="photoRotSlider" min="0" max="360" value="0">
+        </div>
+        <div class="quick-rot">
+          <button data-deg="90">+90°</button>
+          <button data-deg="180">+180°</button>
+          <button data-deg="270">+270°</button>
+        </div>
+        <button id="photoResetBtn" class="ghost-btn small">位置・拡大率をリセット</button>
+      </div>
+
+      <div id="textProps" class="props" hidden>
+        <div class="field-row">
+          <label>フォント</label>
+          <select id="textFont">
+            <option value="'Hiragino Sans', 'Noto Sans JP', sans-serif">ゴシック</option>
+            <option value="'Hiragino Mincho ProN', 'Noto Serif JP', serif">明朝</option>
+            <option value="'Courier New', monospace">等幅</option>
+            <option value="cursive">手書き風</option>
+            <option value="Georgia, serif">Georgia</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <label>サイズ <span id="textSizeVal">48</span></label>
+          <input type="range" id="textSizeSlider" min="8" max="200" value="48">
+        </div>
+        <div class="field-row">
+          <label>色</label>
+          <input type="color" id="textColorPicker" value="#ffffff">
+        </div>
+        <div class="field-row toggles">
+          <button id="boldBtn" class="toggle-btn" data-key="bold">B</button>
+          <button id="italicBtn" class="toggle-btn" data-key="italic">I</button>
+          <button id="alignLeft" class="toggle-btn" data-align="left">左</button>
+          <button id="alignCenter" class="toggle-btn" data-align="center">中</button>
+          <button id="alignRight" class="toggle-btn" data-align="right">右</button>
+        </div>
+        <div class="field-row">
+          <label>回転 <span id="textRotVal">0</span>°</label>
+          <input type="range" id="textRotSlider" min="0" max="360" value="0">
+        </div>
+        <div class="field-row">
+          <label>不透明度 <span id="textOpacityVal">100</span>%</label>
+          <input type="range" id="textOpacitySlider" min="0" max="100" value="100">
+        </div>
+        <div class="field-row">
+          <label>行間 <span id="textLineHeightVal">1.2</span></label>
+          <input type="range" id="textLineHeightSlider" min="0.8" max="2.5" step="0.05" value="1.2">
+        </div>
+        <div class="field-row">
+          <label>文字間隔 <span id="textLetterSpacingVal">0</span>px</label>
+          <input type="range" id="textLetterSpacingSlider" min="-5" max="30" value="0">
+        </div>
+        <div class="field-row">
+          <label>ドロップシャドウ<input type="checkbox" id="shadowToggle"></label>
+        </div>
+        <div id="shadowProps" hidden>
+          <div class="field-row">
+            <label>色</label>
+            <input type="color" id="shadowColorPicker" value="#000000">
+          </div>
+          <div class="field-row">
+            <label>距離 <span id="shadowDistVal">4</span></label>
+            <input type="range" id="shadowDistSlider" min="0" max="60" value="4">
+          </div>
+          <div class="field-row">
+            <label>ぼかし <span id="shadowBlurVal">6</span></label>
+            <input type="range" id="shadowBlurSlider" min="0" max="60" value="6">
+          </div>
+          <div class="field-row">
+            <label>角度 <span id="shadowAngleVal">45</span>°</label>
+            <input type="range" id="shadowAngleSlider" min="0" max="360" value="45">
+          </div>
+          <div class="field-row">
+            <label>不透明度 <span id="shadowOpacityVal">60</span>%</label>
+            <input type="range" id="shadowOpacitySlider" min="0" max="100" value="60">
+          </div>
+        </div>
+        <button id="deleteTextBtn" class="ghost-btn small danger">このテキストを削除</button>
+      </div>
+    </div>
+
+  </section>
+</div>
+
+<!-- ===== テンプレートモーダル ===== -->
+<div id="templateModal" class="modal" hidden>
+  <div class="modal-card">
+    <h2>テンプレート</h2>
+    <div id="templateList" class="template-list"></div>
+    <div class="field-row">
+      <input type="text" id="templateNameInput" placeholder="テンプレート名">
+      <button id="saveTemplateBtn" class="secondary-btn">現在の設定を保存</button>
+    </div>
+    <button id="closeTemplateModal" class="ghost-btn">閉じる</button>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
