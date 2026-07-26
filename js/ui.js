@@ -77,6 +77,7 @@ export function initEditor(state, deps) {
   wireSelectedPanel(state, requestRender);
   wireTopbar(state, requestRender);
   wireTemplateModal(state, requestRender);
+  wireModalBackdropClose();
 
   state.onChange(() => {
     syncAllFromState(state);
@@ -553,16 +554,35 @@ export function updateUndoRedoButtons(state) {
 /* ---- Template modal ---- */
 
 function wireTemplateModal(state, requestRender) {
+  const closeModal = () => { $("templateModal").hidden = true; };
+
   $("templateBtn").addEventListener("click", () => {
     renderTemplateList(state, requestRender);
     $("templateModal").hidden = false;
   });
-  $("closeTemplateModal").addEventListener("click", () => { $("templateModal").hidden = true; });
+  $("closeTemplateModal").addEventListener("click", closeModal);
+  $("templateModalClose").addEventListener("click", closeModal);
   $("saveTemplateBtn").addEventListener("click", () => {
     const name = $("templateNameInput").value.trim();
     saveTemplate(name, state.data);
     $("templateNameInput").value = "";
     renderTemplateList(state, requestRender);
+  });
+}
+
+/** Safety net: tapping the dimmed backdrop of any .modal closes it, and Escape closes
+ *  whichever modal is currently open. Covers the template modal and the text editor. */
+function wireModalBackdropClose() {
+  document.querySelectorAll(".modal").forEach((modal) => {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) modal.hidden = true;
+    });
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    document.querySelectorAll(".modal").forEach((modal) => {
+      if (!modal.hidden) modal.hidden = true;
+    });
   });
 }
 

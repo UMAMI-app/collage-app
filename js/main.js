@@ -19,6 +19,18 @@ const ctx = canvas.getContext("2d");
 
 let state = null;
 
+/** Force every modal/overlay closed. Mobile Safari can restore a page from its
+ *  back-forward cache with whatever DOM state it had when you navigated away
+ *  (e.g. a modal left open), which looks like "it opens every time" even
+ *  though it's really the same never-closed session being resurrected. */
+function forceAllModalsClosed() {
+  document.querySelectorAll(".modal").forEach((m) => { m.hidden = true; });
+}
+forceAllModalsClosed();
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted) forceAllModalsClosed();
+});
+
 function syncCanvasPixelSize() {
   const { w, h } = canvasPixelSize(state.data.ratioId);
   if (canvas.width !== w || canvas.height !== h) {
