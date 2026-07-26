@@ -305,6 +305,13 @@ button { font-family: inherit; }
   z-index: 50;
   padding: 20px;
 }
+/* A class that sets `display` takes precedence over the browser's default
+   [hidden] rule (author styles beat user-agent styles regardless of
+   specificity), so without this, toggling the hidden attribute/property on
+   a .modal or .screen element has NO visible effect - it stays on screen. */
+.modal[hidden], .screen[hidden] {
+  display: none !important;
+}
 .modal-card {
   background: var(--panel);
   border: 1px solid var(--border);
