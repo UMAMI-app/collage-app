@@ -33,10 +33,20 @@
 <div id="editorScreen" class="screen">
 
   <header class="topbar">
-    <button id="undoBtn" class="icon-btn" title="元に戻す">↶</button>
-    <button id="redoBtn" class="icon-btn" title="やり直す">↷</button>
+    <button id="undoBtn" class="round-icon-btn" title="元に戻す">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M7 8H4V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4.5 15.5A8 8 0 1 0 6 6.3L4 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <button id="redoBtn" class="round-icon-btn" title="やり直す">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17 8H20V5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M19.5 15.5A8 8 0 1 1 18 6.3L20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
     <div class="topbar-spacer"></div>
-    <button id="templateBtn" class="icon-btn" title="テンプレート">🗂</button>
+    <button id="templateBtn" class="text-icon-btn" title="テンプレート">テンプレート</button>
     <button id="exportBtn" class="primary-btn small">書き出す</button>
   </header>
 
@@ -70,7 +80,7 @@
 
     <div id="panel-photos" class="panel active">
       <div class="row-scroll" id="photoTray"></div>
-      <button id="addPhotoBtn" class="secondary-btn">＋ 写真を追加</button>
+      <p class="hint">写真がない枠をタップすると追加できます</p>
       <input type="file" id="fileInput" accept="image/*" multiple hidden>
     </div>
 
@@ -97,7 +107,7 @@
       </div>
       <div class="field-row">
         <label>角丸 <span id="radiusVal">0</span>px</label>
-        <input type="range" id="radiusSlider" min="0" max="40" value="0">
+        <input type="range" id="radiusSlider" min="0" max="100" value="0">
       </div>
       <div class="field-row">
         <label>フレーム<input type="checkbox" id="frameToggle" checked></label>
@@ -113,7 +123,10 @@
     </div>
 
     <div id="panel-text" class="panel">
-      <button id="addTextBtn" class="secondary-btn">＋ テキストを追加</button>
+      <div class="text-add-row">
+        <button id="addTextBtnH" class="secondary-btn">＋横書きテキスト追加</button>
+        <button id="addTextBtnV" class="secondary-btn">＋縦書きテキスト追加</button>
+      </div>
       <div id="textList" class="row-scroll"></div>
     </div>
 
@@ -139,8 +152,6 @@
           <select id="textFont">
             <option value="'Hiragino Sans', 'Noto Sans JP', sans-serif">ゴシック</option>
             <option value="'Hiragino Mincho ProN', 'Noto Serif JP', serif">明朝</option>
-            <option value="'Courier New', monospace">等幅</option>
-            <option value="cursive">手書き風</option>
             <option value="Georgia, serif">Georgia</option>
           </select>
         </div>
@@ -152,16 +163,15 @@
           <label>色</label>
           <input type="color" id="textColorPicker" value="#ffffff">
         </div>
+        <div class="field-row">
+          <label>太さ <span id="textWeightVal">400</span></label>
+          <input type="range" id="textWeightSlider" min="100" max="900" step="100" value="400">
+        </div>
         <div class="field-row toggles">
-          <button id="boldBtn" class="toggle-btn" data-key="bold">B</button>
           <button id="italicBtn" class="toggle-btn" data-key="italic">I</button>
           <button id="alignLeft" class="toggle-btn" data-align="left">左</button>
           <button id="alignCenter" class="toggle-btn" data-align="center">中</button>
           <button id="alignRight" class="toggle-btn" data-align="right">右</button>
-        </div>
-        <div class="field-row">
-          <label>回転 <span id="textRotVal">0</span>°</label>
-          <input type="range" id="textRotSlider" min="0" max="360" value="0">
         </div>
         <div class="field-row">
           <label>不透明度 <span id="textOpacityVal">100</span>%</label>

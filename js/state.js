@@ -25,17 +25,18 @@ export function defaultShadow() {
   };
 }
 
-export function defaultTextObj(canvasW, canvasH) {
+export function defaultTextObj(canvasW, canvasH, orientation = "horizontal") {
   return {
     id: uid("text"),
-    content: "テキスト",
+    content: orientation === "vertical" ? "縦書き" : "テキスト",
     font: "'Hiragino Sans', 'Noto Sans JP', sans-serif",
     size: 48,
     color: "#ffffff",
-    bold: false,
+    weight: 400,
     italic: false,
     align: "center",
-    rotation: 0,
+    orientation, // 'horizontal' | 'vertical'
+    rotation: 0, // no longer user-editable; kept at 0
     opacity: 100,
     lineHeight: 1.2,
     letterSpacing: 0,

@@ -28,6 +28,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
     onSelectionChange, // (selection) => void
     onOpenTextEditor, // (textObj) => void
     onEmptyCellTap, // (index) => void
+    onLiftChange = () => {}, // (index|null) => void - photo "picked up" for reorder
   } = callbacks;
 
   const pointers = new Map(); // pointerId -> {x,y}
@@ -48,12 +49,8 @@ export function attachGestures(canvas, ctx, state, callbacks) {
     for (let i = s.texts.length - 1; i >= 0; i--) {
       const t = s.texts[i];
       const { w, h } = textLocalBounds(ctx, t);
-      const rad = (-t.rotation * Math.PI) / 180;
-      const dx = x - t.x, dy = y - t.y;
-      const lx = dx * Math.cos(rad) - dy * Math.sin(rad);
-      const ly = dx * Math.sin(rad) + dy * Math.cos(rad);
       const pad = 10;
-      if (Math.abs(lx) <= w / 2 + pad && Math.abs(ly) <= h / 2 + pad) {
+      if (Math.abs(x - t.x) <= w / 2 + pad && Math.abs(y - t.y) <= h / 2 + pad) {
         return { type: "text", id: t.id, index: i };
       }
     }
@@ -101,6 +98,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
             gesture.hoverIndex = hit.index;
             state.data.selection = { type: "photo", index: hit.index };
             onSelectionChange(state.data.selection);
+            onLiftChange(hit.index);
             onRequestRender();
           }
         }, LONG_PRESS_MS),
@@ -119,7 +117,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
         base: null, // filled from live object
       };
       const t = state.data.texts.find((x) => x.id === hit.id);
-      gesture.base = { x: t.x, y: t.y, size: t.size, rotation: t.rotation };
+      gesture.base = { x: t.x, y: t.y, size: t.size };
     }
   }
 
@@ -165,13 +163,13 @@ export function attachGestures(canvas, ctx, state, callbacks) {
         const p = state.data.photos[gesture.index];
         if (p) {
           p.scale = clamp(gesture.base.scale * scaleRatio, 0.2, 8);
-          p.rotation = norm360(gesture.base.rotation + rotDelta);
+          p.rotation = snapToRightAngle(norm360(gesture.base.rotation + rotDelta));
         }
       } else {
+        // Text has no rotation control - pinch only scales font size.
         const t = state.data.texts.find((x) => x.id === gesture.id);
         if (t) {
           t.size = Math.round(clamp(gesture.base.size * scaleRatio, 8, 400));
-          t.rotation = norm360(gesture.base.rotation + rotDelta);
         }
       }
       onRequestRender();
@@ -243,7 +241,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
       } else if (gesture.kind === "text") {
         const t = state.data.texts.find((x) => x.id === gesture.id);
         gesture.startPt = remaining;
-        gesture.base = { x: t?.x || 0, y: t?.y || 0, size: t?.size || 48, rotation: t?.rotation || 0 };
+        gesture.base = { x: t?.x || 0, y: t?.y || 0, size: t?.size || 48 };
         gesture.pinch = null;
       }
       return;
@@ -266,6 +264,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
     if (g.kind === "photo") {
       clearTimeout(g.longPressTimer);
       if (g.longPressFired) {
+        onLiftChange(null);
         if (g.hoverIndex != null && g.hoverIndex !== g.index) {
           state.beginChange();
           const arr = state.data.photos;
@@ -313,6 +312,10 @@ export function attachGestures(canvas, ctx, state, callbacks) {
 
   function onPointerCancel(evt) {
     pointers.delete(evt.pointerId);
+    if (gesture && gesture.kind === "photo" && gesture.longPressFired) {
+      clearTimeout(gesture.longPressTimer);
+      onLiftChange(null);
+    }
     gesture = null;
   }
 
@@ -330,4 +333,13 @@ export function attachGestures(canvas, ctx, state, callbacks) {
 }
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+const SNAP_THRESHOLD_DEG = 6;
+/** Snaps to the nearest multiple of 90 deg (i.e. upright/on-its-side) when
+ *  close enough, so manually rotating a photo can land it perfectly level. */
+export function snapToRightAngle(deg) {
+  const nearest = Math.round(deg / 90) * 90;
+  const diff = Math.min(Math.abs(deg - nearest), 360 - Math.abs(deg - nearest));
+  return diff <= SNAP_THRESHOLD_DEG ? norm360(nearest) : deg;
+}
 function norm360(deg) { let d = deg % 360; if (d < 0) d += 360; return d; }

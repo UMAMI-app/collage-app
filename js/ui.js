@@ -204,10 +204,6 @@ let pendingSlotTarget = null;
 
 function wirePhotoPanel(state, requestRender, getCanvasSize) {
   const fileInput = $("fileInput");
-  $("addPhotoBtn").addEventListener("click", () => {
-    pendingSlotTarget = null;
-    fileInput.click();
-  });
 
   fileInput.addEventListener("change", async () => {
     const files = [...fileInput.files];
@@ -284,17 +280,19 @@ function renderPhotoTray(state, requestRender) {
 /* ---- Text panel ---- */
 
 function wireTextPanel(state, requestRender, getCanvasSize) {
-  $("addTextBtn").addEventListener("click", () => {
+  const addText = (orientation) => {
     state.beginChange();
     const { w, h } = getCanvasSize();
-    const t = defaultTextObj(w, h);
+    const t = defaultTextObj(w, h, orientation);
     state.data.texts.push(t);
     state.data.selection = { type: "text", id: t.id };
     state.notify();
     requestRender();
     switchToTab("panel-selected");
     openTextEditor(t, state, requestRender);
-  });
+  };
+  $("addTextBtnH").addEventListener("click", () => addText("horizontal"));
+  $("addTextBtnV").addEventListener("click", () => addText("vertical"));
 }
 
 function renderTextList(state, requestRender) {
@@ -401,7 +399,15 @@ function wireSelectedPanel(state, requestRender) {
     state.notify(); requestRender();
   });
 
-  $("boldBtn").addEventListener("click", () => toggleTextFlag(state, requestRender, "bold", $("boldBtn")));
+  const textWeightSlider = $("textWeightSlider");
+  wireContinuousStart(textWeightSlider, state);
+  textWeightSlider.addEventListener("input", () => {
+    const t = currentText(state); if (!t) return;
+    t.weight = Number(textWeightSlider.value);
+    $("textWeightVal").textContent = textWeightSlider.value;
+    state.notify(); requestRender();
+  });
+
   $("italicBtn").addEventListener("click", () => toggleTextFlag(state, requestRender, "italic", $("italicBtn")));
 
   [["alignLeft", "left"], ["alignCenter", "center"], ["alignRight", "right"]].forEach(([id, val]) => {
@@ -411,15 +417,6 @@ function wireSelectedPanel(state, requestRender) {
       t.align = val;
       state.notify(); requestRender();
     });
-  });
-
-  const textRotSlider = $("textRotSlider");
-  wireContinuousStart(textRotSlider, state);
-  textRotSlider.addEventListener("input", () => {
-    const t = currentText(state); if (!t) return;
-    t.rotation = Number(textRotSlider.value);
-    $("textRotVal").textContent = textRotSlider.value;
-    state.notify(); requestRender();
   });
 
   const textOpacitySlider = $("textOpacitySlider");
@@ -662,12 +659,11 @@ export function syncAllFromState(state) {
       $("textFont").value = t.font;
       $("textSizeSlider").value = t.size; $("textSizeVal").textContent = t.size;
       $("textColorPicker").value = t.color;
-      $("boldBtn").classList.toggle("active", t.bold);
+      $("textWeightSlider").value = t.weight || 400; $("textWeightVal").textContent = t.weight || 400;
       $("italicBtn").classList.toggle("active", t.italic);
       $("alignLeft").classList.toggle("active", t.align === "left");
       $("alignCenter").classList.toggle("active", t.align === "center");
       $("alignRight").classList.toggle("active", t.align === "right");
-      $("textRotSlider").value = t.rotation; $("textRotVal").textContent = Math.round(t.rotation);
       $("textOpacitySlider").value = t.opacity; $("textOpacityVal").textContent = t.opacity;
       $("textLineHeightSlider").value = t.lineHeight; $("textLineHeightVal").textContent = t.lineHeight;
       $("textLetterSpacingSlider").value = t.letterSpacing; $("textLetterSpacingVal").textContent = t.letterSpacing;

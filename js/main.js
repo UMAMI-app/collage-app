@@ -18,6 +18,7 @@ const canvas = document.getElementById("mainCanvas");
 const ctx = canvas.getContext("2d");
 
 let state = null;
+let liftedPhotoIndex = null;
 
 /** Force every modal/overlay closed. Mobile Safari can restore a page from its
  *  back-forward cache with whatever DOM state it had when you navigated away
@@ -43,7 +44,7 @@ function syncCanvasPixelSize() {
 function requestRender() {
   if (!state) return;
   const { w, h } = syncCanvasPixelSize();
-  renderCanvas(ctx, state.data, w, h, { forExport: false });
+  renderCanvas(ctx, state.data, w, h, { forExport: false, liftedIndex: liftedPhotoIndex });
 }
 
 async function hydrateImagesForState(data) {
@@ -84,6 +85,7 @@ function bootEditor() {
     onSelectionChange: () => { state.notify(); },
     onOpenTextEditor: (t) => openTextEditor(t, state, requestRender),
     onEmptyCellTap: (index) => requestPhotoForSlot(index),
+    onLiftChange: (index) => { liftedPhotoIndex = index; requestRender(); },
   });
 
   initEditor(state, {

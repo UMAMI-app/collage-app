@@ -15,11 +15,11 @@ export function coverBaseScale(cellW, cellH, naturalW, naturalH) {
   return Math.max(cellW / naturalW, cellH / naturalH);
 }
 
-/** Build the canvas font string for a text object. */
+/** Build the canvas font string for a text object (numeric weight, e.g. "700"). */
 function fontString(t) {
   const parts = [];
   if (t.italic) parts.push("italic");
-  if (t.bold) parts.push("bold");
+  parts.push(String(t.weight || 400));
   parts.push(`${t.size}px`);
   parts.push(t.font);
   return parts.join(" ");
@@ -32,39 +32,33 @@ function measureLineWidth(ctx, line, letterSpacing) {
   return w - letterSpacing;
 }
 
-/** Returns an (unrotated, local-space) bounding box {w,h} for a text object. */
+/** Returns a local-space bounding box {w,h} for a text object. Text has no
+ *  rotation (removed by design), so this box is also its screen-space box. */
 export function textLocalBounds(ctx, t) {
   ctx.save();
   ctx.font = fontString(t);
   const lines = (t.content || "").split("\n");
-  let maxW = 0;
-  for (const line of lines) maxW = Math.max(maxW, measureLineWidth(ctx, line, t.letterSpacing));
-  const h = lines.length * t.size * t.lineHeight;
+  let w, h;
+  if (t.orientation === "vertical") {
+    const colPitch = t.size * t.lineHeight;
+    const charPitch = t.size + t.letterSpacing;
+    const maxCharsInCol = lines.reduce((m, l) => Math.max(m, l.length), 1);
+    w = lines.length * colPitch;
+    h = maxCharsInCol * charPitch;
+  } else {
+    let maxW = 0;
+    for (const line of lines) maxW = Math.max(maxW, measureLineWidth(ctx, line, t.letterSpacing));
+    w = maxW;
+    h = lines.length * t.size * t.lineHeight;
+  }
   ctx.restore();
-  return { w: maxW, h, lines };
+  return { w, h, lines };
 }
 
-function drawTextObject(ctx, t) {
-  if (!t.content) return;
-  ctx.save();
-  ctx.globalAlpha = Math.max(0, Math.min(1, t.opacity / 100));
-  ctx.translate(t.x, t.y);
-  ctx.rotate((t.rotation * Math.PI) / 180);
-  ctx.font = fontString(t);
-  ctx.textBaseline = "middle";
-
-  const { w: maxW, h: totalH, lines } = textLocalBounds(ctx, t);
-
-  if (t.shadow && t.shadow.enabled) {
-    const rad = (t.shadow.angle * Math.PI) / 180;
-    ctx.shadowOffsetX = Math.cos(rad) * t.shadow.distance;
-    ctx.shadowOffsetY = Math.sin(rad) * t.shadow.distance;
-    ctx.shadowBlur = t.shadow.blur;
-    ctx.shadowColor = hexToRgba(t.shadow.color, t.shadow.opacity / 100);
-  }
-
-  ctx.fillStyle = t.color;
-
+function drawHorizontalText(ctx, t, lines) {
+  ctx.textAlign = "left"; // manual per-character advance below needs a fixed start edge
+  let maxW = 0;
+  for (const line of lines) maxW = Math.max(maxW, measureLineWidth(ctx, line, t.letterSpacing));
   const startY = -((lines.length - 1) * t.size * t.lineHeight) / 2;
 
   lines.forEach((line, i) => {
@@ -81,6 +75,50 @@ function drawTextObject(ctx, t) {
       cx += ctx.measureText(ch).width + t.letterSpacing;
     }
   });
+}
+
+/** Vertical (tategaki) layout: each \n-separated line becomes one column of
+ *  characters running top-to-bottom; columns run right-to-left. */
+function drawVerticalText(ctx, t, lines) {
+  ctx.textAlign = "center"; // each character is centered within its column
+  const colPitch = t.size * t.lineHeight;
+  const charPitch = t.size + t.letterSpacing;
+  const totalW = lines.length * colPitch;
+  const startX = totalW / 2 - colPitch / 2;
+
+  lines.forEach((line, colIndex) => {
+    const x = startX - colIndex * colPitch;
+    const startY = -((line.length - 1) * charPitch) / 2;
+    [...line].forEach((ch, i) => {
+      ctx.fillText(ch, x, startY + i * charPitch);
+    });
+  });
+}
+
+function drawTextObject(ctx, t) {
+  if (!t.content) return;
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, t.opacity / 100));
+  ctx.translate(t.x, t.y);
+  ctx.font = fontString(t);
+  ctx.textBaseline = "middle";
+
+  if (t.shadow && t.shadow.enabled) {
+    const rad = (t.shadow.angle * Math.PI) / 180;
+    ctx.shadowOffsetX = Math.cos(rad) * t.shadow.distance;
+    ctx.shadowOffsetY = Math.sin(rad) * t.shadow.distance;
+    ctx.shadowBlur = t.shadow.blur;
+    ctx.shadowColor = hexToRgba(t.shadow.color, t.shadow.opacity / 100);
+  }
+
+  ctx.fillStyle = t.color;
+
+  const lines = (t.content || "").split("\n");
+  if (t.orientation === "vertical") {
+    drawVerticalText(ctx, t, lines);
+  } else {
+    drawHorizontalText(ctx, t, lines);
+  }
 
   ctx.restore();
 }
@@ -160,10 +198,11 @@ function drawSelectionOutline(ctx, rect, rotation = 0) {
  * @param {object} state (state.data)
  * @param {number} canvasW
  * @param {number} canvasH
- * @param {object} opts { forExport?: boolean }
+ * @param {object} opts { forExport?: boolean, liftedIndex?: number|null }
  */
 export function renderCanvas(ctx, state, canvasW, canvasH, opts = {}) {
   const forExport = !!opts.forExport;
+  const liftedIndex = opts.liftedIndex ?? null;
   ctx.clearRect(0, 0, canvasW, canvasH);
   ctx.fillStyle = state.bgColor;
   ctx.fillRect(0, 0, canvasW, canvasH);
@@ -172,8 +211,30 @@ export function renderCanvas(ctx, state, canvasW, canvasH, opts = {}) {
 
   cells.forEach((cell, i) => {
     const photo = state.photos[i];
+    const lifted = !forExport && i === liftedIndex;
+
+    if (lifted) {
+      ctx.save();
+      const cx = cell.x + cell.w / 2, cy = cell.y + cell.h / 2;
+      ctx.translate(cx, cy);
+      ctx.scale(1.08, 1.08);
+      ctx.translate(-cx, -cy);
+      // Cast a drop shadow behind the lifted cell (drawn via a near-transparent
+      // fill of the same rounded shape, so only the shadow itself is visible).
+      ctx.save();
+      ctx.shadowColor = "rgba(0,0,0,0.35)";
+      ctx.shadowBlur = 24;
+      ctx.shadowOffsetY = 10;
+      ctx.fillStyle = "rgba(0,0,0,0.001)";
+      roundedRectPath(ctx, cell.x, cell.y, cell.w, cell.h, state.cornerRadius);
+      ctx.fill();
+      ctx.restore();
+    }
+
     drawPhotoInCell(ctx, cell, photo, state.cornerRadius);
     drawFrame(ctx, cell, state.frame, state.cornerRadius);
+
+    if (lifted) ctx.restore();
   });
 
   for (const t of state.texts) {
@@ -188,7 +249,7 @@ export function renderCanvas(ctx, state, canvasW, canvasH, opts = {}) {
       const t = state.texts.find((x) => x.id === state.selection.id);
       if (t) {
         const { w, h } = textLocalBounds(ctx, t);
-        drawSelectionOutline(ctx, { x: t.x - w / 2, y: t.y - h / 2, w, h }, t.rotation);
+        drawSelectionOutline(ctx, { x: t.x - w / 2, y: t.y - h / 2, w, h }, 0);
       }
     }
   }
