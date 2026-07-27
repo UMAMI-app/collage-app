@@ -61,7 +61,6 @@
   <nav class="bottom-tabs">
     <button class="tab-btn active" data-panel="panel-layout">レイアウト</button>
     <button class="tab-btn" data-panel="panel-text">テキスト</button>
-    <button class="tab-btn" data-panel="panel-selected">選択中</button>
   </nav>
 
   <input type="file" id="fileInput" accept="image/*" multiple hidden>
@@ -100,26 +99,9 @@
     </div>
 
     <div id="panel-text" class="panel">
-      <div class="text-add-row">
+      <div class="text-add-row" id="textAddRow">
         <button id="addTextBtnH" class="secondary-btn">＋横書きテキスト追加</button>
         <button id="addTextBtnV" class="secondary-btn">＋縦書きテキスト追加</button>
-      </div>
-    </div>
-
-    <div id="panel-selected" class="panel">
-      <div id="noSelection" class="hint">写真またはテキストをタップして選択してください</div>
-
-      <div id="photoProps" class="props" hidden>
-        <div class="field-row">
-          <label>回転 <span id="photoRotVal">0</span>°</label>
-          <input type="range" id="photoRotSlider" min="0" max="360" value="0">
-        </div>
-        <div class="quick-rot">
-          <button data-deg="90">+90°</button>
-          <button data-deg="180">+180°</button>
-          <button data-deg="270">+270°</button>
-        </div>
-        <button id="photoResetBtn" class="ghost-btn small">位置・拡大率をリセット</button>
       </div>
 
       <div id="textProps" class="props" hidden>

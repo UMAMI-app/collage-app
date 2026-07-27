@@ -21,6 +21,25 @@ export async function exportJPEG(state) {
   const pad = (n) => String(n).padStart(2, "0");
   const filename = `collage_${ts.getFullYear()}${pad(ts.getMonth() + 1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}.jpg`;
 
+  // On iOS/iPadOS Safari, a plain <a download> link just drops the file into
+  // "Files > Downloads" - it does NOT reach the Photos app. Routing through
+  // the native share sheet (Web Share API, file variant) lets the user pick
+  // "画像を保存" / "Save Image", which saves straight into Photos. No browser
+  // API can write to Photos without this user-facing step (silent writes
+  // aren't permitted for privacy/security reasons).
+  if (navigator.canShare && navigator.share) {
+    try {
+      const file = new File([blob], filename, { type: "image/jpeg" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Collage" });
+        return filename;
+      }
+    } catch (err) {
+      if (err && err.name === "AbortError") return filename; // user cancelled the share sheet
+      // otherwise fall through to the download fallback below
+    }
+  }
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

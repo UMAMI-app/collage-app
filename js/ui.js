@@ -11,8 +11,6 @@ import { exportJPEG } from "./export.js";
 
 const $ = (id) => document.getElementById(id);
 
-function norm360(deg) { let d = deg % 360; if (d < 0) d += 360; return d; }
-
 /* ---------------- Start screen ---------------- */
 
 export function initStartScreen({ hasAutosave, onStart, onResume }) {
@@ -74,7 +72,7 @@ export function initEditor(state, deps) {
   wireLayoutPanel(state, requestRender);
   wirePhotoPanel(state, requestRender, getCanvasSize);
   wireTextPanel(state, requestRender, getCanvasSize, openInlineTextEditor);
-  wireSelectedPanel(state, requestRender);
+  wireTextProps(state, requestRender);
   wireTopbar(state, requestRender);
   wireTemplateModal(state, requestRender);
   wireModalBackdropClose();
@@ -288,49 +286,16 @@ function wireTextPanel(state, requestRender, getCanvasSize, openInlineTextEditor
     state.data.selection = { type: "text", id: t.id };
     state.notify();
     requestRender();
-    switchToTab("panel-selected");
+    switchToTab("panel-text");
     openInlineTextEditor(t);
   };
   $("addTextBtnH").addEventListener("click", () => addText("horizontal"));
   $("addTextBtnV").addEventListener("click", () => addText("vertical"));
 }
 
-/* ---- Selected panel (photo / text properties) ---- */
+/* ---- Text properties (shown inside the テキスト tab when a text is selected) ---- */
 
-function wireSelectedPanel(state, requestRender) {
-  // photo
-  const photoRotSlider = $("photoRotSlider");
-  wireContinuousStart(photoRotSlider, state);
-  photoRotSlider.addEventListener("input", () => {
-    const p = currentPhoto(state);
-    if (!p) return;
-    p.rotation = Number(photoRotSlider.value);
-    $("photoRotVal").textContent = photoRotSlider.value;
-    state.notify();
-    requestRender();
-  });
-
-  document.querySelectorAll(".quick-rot button").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const p = currentPhoto(state);
-      if (!p) return;
-      state.beginChange();
-      p.rotation = norm360(p.rotation + Number(btn.dataset.deg));
-      state.notify();
-      requestRender();
-    });
-  });
-
-  $("photoResetBtn").addEventListener("click", () => {
-    const p = currentPhoto(state);
-    if (!p) return;
-    state.beginChange();
-    p.offsetX = 0; p.offsetY = 0; p.scale = 1; p.rotation = 0;
-    state.notify();
-    requestRender();
-  });
-
-  // text
+function wireTextProps(state, requestRender) {
   const textFont = $("textFont");
   textFont.addEventListener("change", () => {
     const t = currentText(state);
@@ -472,11 +437,6 @@ function toggleTextFlag(state, requestRender, key, btn) {
   state.notify(); requestRender();
 }
 
-function currentPhoto(state) {
-  const s = state.data.selection;
-  if (!s || s.type !== "photo") return null;
-  return state.data.photos[s.index] || null;
-}
 function currentText(state) {
   const s = state.data.selection;
   if (!s || s.type !== "text") return null;
@@ -596,17 +556,10 @@ export function syncAllFromState(state) {
   renderLayoutVariantPicker(state, () => {});
 
   const sel = d.selection;
-  $("noSelection").hidden = !!sel;
-  $("photoProps").hidden = !(sel && sel.type === "photo");
-  $("textProps").hidden = !(sel && sel.type === "text");
+  const textSelected = !!(sel && sel.type === "text");
+  $("textAddRow").hidden = textSelected;
+  $("textProps").hidden = !textSelected;
 
-  if (sel && sel.type === "photo") {
-    const p = d.photos[sel.index];
-    if (p) {
-      $("photoRotSlider").value = p.rotation || 0;
-      $("photoRotVal").textContent = Math.round(p.rotation || 0);
-    }
-  }
   if (sel && sel.type === "text") {
     const t = d.texts.find((x) => x.id === sel.id);
     if (t) {

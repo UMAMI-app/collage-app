@@ -7,7 +7,7 @@ import { AppState, createDefaultState, imageRegistry } from "./state.js";
 import { canvasPixelSize } from "./layout.js";
 import { renderCanvas, textLocalBounds } from "./render.js";
 import { attachGestures } from "./gestures.js";
-import { initEditor, requestPhotoForSlot } from "./ui.js";
+import { initEditor, requestPhotoForSlot, switchToTab } from "./ui.js";
 
 const inlineTextEditArea = document.getElementById("inlineTextEditArea");
 
@@ -145,7 +145,12 @@ function bootEditor() {
   attachGestures(canvas, ctx, state, {
     getCanvasSize: () => ({ w: canvas.width, h: canvas.height }),
     onRequestRender: requestRender,
-    onSelectionChange: () => { state.notify(); },
+    onSelectionChange: (sel) => {
+      state.notify();
+      // Selecting a text object shows its properties inside the テキスト tab,
+      // so jump there automatically (mirrors the old 選択中 tab's role).
+      if (sel && sel.type === "text") switchToTab("panel-text");
+    },
     onTextDoubleTap: (t) => openInlineTextEditor(t),
     onEmptyCellTap: (index) => requestPhotoForSlot(index),
     onLiftChange: (index) => { liftedPhotoIndex = index; requestRender(); },
