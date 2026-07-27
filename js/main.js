@@ -5,9 +5,11 @@
 
 import { AppState, createDefaultState, imageRegistry } from "./state.js";
 import { canvasPixelSize } from "./layout.js";
-import { renderCanvas } from "./render.js";
+import { renderCanvas, textLocalBounds } from "./render.js";
 import { attachGestures } from "./gestures.js";
-import { initEditor, requestPhotoForSlot, openTextEditor } from "./ui.js";
+import { initEditor, requestPhotoForSlot } from "./ui.js";
+
+const inlineTextEditArea = document.getElementById("inlineTextEditArea");
 
 const DEFAULT_PHOTO_COUNT = 4;
 const DEFAULT_RATIO_ID = "1:1";
@@ -47,6 +49,58 @@ function requestRender() {
   renderCanvas(ctx, state.data, w, h, { forExport: false, liftedIndex: liftedPhotoIndex });
 }
 
+/** Double-tap-to-edit: positions a borderless textarea directly over the
+ *  text object (in CSS pixels, converted from canvas pixel space) so typing
+ *  feels like editing in place rather than opening a separate popup. */
+function openInlineTextEditor(textObj) {
+  const area = inlineTextEditArea;
+  const rect = canvas.getBoundingClientRect();
+  const wrapRect = canvas.parentElement.getBoundingClientRect();
+  const scaleX = rect.width / canvas.width;
+  const scaleY = rect.height / canvas.height;
+  const { w, h } = textLocalBounds(ctx, textObj);
+
+  const canvasOffsetLeft = rect.left - wrapRect.left;
+  const canvasOffsetTop = rect.top - wrapRect.top;
+  const cssW = Math.max(30, w * scaleX);
+  const cssH = Math.max(24, h * scaleY);
+
+  area.style.left = `${canvasOffsetLeft + textObj.x * scaleX - cssW / 2}px`;
+  area.style.top = `${canvasOffsetTop + textObj.y * scaleY - cssH / 2}px`;
+  area.style.width = `${cssW}px`;
+  area.style.height = `${cssH}px`;
+  area.style.fontSize = `${textObj.size * scaleY}px`;
+  area.style.lineHeight = String(textObj.lineHeight);
+  area.style.color = textObj.color;
+  area.style.fontWeight = String(textObj.weight || 400);
+  area.style.fontStyle = textObj.italic ? "italic" : "normal";
+  area.style.fontFamily = textObj.font;
+  area.style.writingMode = textObj.orientation === "vertical" ? "vertical-rl" : "horizontal-tb";
+  area.style.textAlign = textObj.orientation === "vertical" ? "center" : (textObj.align || "center");
+
+  area.hidden = false;
+  area.value = textObj.content;
+
+  let began = false;
+  const commit = () => {
+    if (!began) { state.beginChange(); began = true; }
+    textObj.content = area.value;
+    state.notify();
+    requestRender();
+  };
+  area.oninput = commit;
+  area.onblur = () => {
+    area.hidden = true;
+    area.oninput = null;
+    area.onblur = null;
+  };
+
+  requestAnimationFrame(() => {
+    area.focus();
+    area.select();
+  });
+}
+
 async function hydrateImagesForState(data) {
   const ids = new Set();
   for (const p of data.photos) if (p && p.imgId) ids.add(p.imgId);
@@ -83,7 +137,7 @@ function bootEditor() {
     getCanvasSize: () => ({ w: canvas.width, h: canvas.height }),
     onRequestRender: requestRender,
     onSelectionChange: () => { state.notify(); },
-    onOpenTextEditor: (t) => openTextEditor(t, state, requestRender),
+    onTextDoubleTap: (t) => openInlineTextEditor(t),
     onEmptyCellTap: (index) => requestPhotoForSlot(index),
     onLiftChange: (index) => { liftedPhotoIndex = index; requestRender(); },
   });
@@ -91,6 +145,7 @@ function bootEditor() {
   initEditor(state, {
     requestRender,
     getCanvasSize: () => ({ w: canvas.width, h: canvas.height }),
+    openInlineTextEditor,
   });
 
   window.addEventListener("resize", requestRender);

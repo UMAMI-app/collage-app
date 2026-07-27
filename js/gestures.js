@@ -3,8 +3,8 @@
 //  photo:  tap = select, long-press+drag = reorder(swap slots),
 //          1-finger drag = pan image inside its cell,
 //          2-finger pinch = scale, 2-finger twist = rotate.
-//  text:   tap = open editor, 1-finger drag = move,
-//          2-finger pinch = scale font size, 2-finger twist = rotate.
+//  text:   tap = select, double-tap = edit in place, 1-finger drag = move,
+//          2-finger pinch = scale font size.
 //  empty cell: tap = request a photo for that slot.
 
 import { getCellRects, textLocalBounds } from "./render.js";
@@ -12,7 +12,7 @@ import { getCellRects, textLocalBounds } from "./render.js";
 const LONG_PRESS_MS = 480;
 const MOVE_CANCEL_PX = 10;
 const TAP_MAX_MOVE_PX = 8;
-const TAP_MAX_MS = 350;
+const DOUBLE_TAP_MS = 400;
 
 function angleDeg(dx, dy) {
   return (Math.atan2(dy, dx) * 180) / Math.PI;
@@ -26,13 +26,14 @@ export function attachGestures(canvas, ctx, state, callbacks) {
     getCanvasSize, // () => {w,h}
     onRequestRender, // () => void
     onSelectionChange, // (selection) => void
-    onOpenTextEditor, // (textObj) => void
+    onTextDoubleTap, // (textObj) => void - double-tap: edit in place
     onEmptyCellTap, // (index) => void
     onLiftChange = () => {}, // (index|null) => void - photo "picked up" for reorder
   } = callbacks;
 
   const pointers = new Map(); // pointerId -> {x,y}
   let gesture = null; // active single/double pointer gesture info
+  let lastTextTap = { id: null, time: 0 }; // for double-tap detection on text
 
   function toCanvasXY(evt) {
     const rect = canvas.getBoundingClientRect();
@@ -254,8 +255,6 @@ export function attachGestures(canvas, ctx, state, callbacks) {
   }
 
   function finishGesture(g) {
-    const elapsed = performance.now() - g.t0;
-
     if (g.kind === "empty-tap" && !g.moved) {
       onEmptyCellTap(g.index);
       return;
@@ -285,17 +284,18 @@ export function attachGestures(canvas, ctx, state, callbacks) {
     }
 
     if (g.kind === "text") {
-      if (!g.moved && elapsed < TAP_MAX_MS) {
-        state.data.selection = { type: "text", id: g.id };
-        onSelectionChange(state.data.selection);
-        const t = state.data.texts.find((x) => x.id === g.id);
-        onOpenTextEditor(t);
-        onRequestRender();
-        return;
-      }
       if (!g.moved) {
         state.data.selection = { type: "text", id: g.id };
         onSelectionChange(state.data.selection);
+
+        const now = performance.now();
+        if (lastTextTap.id === g.id && now - lastTextTap.time < DOUBLE_TAP_MS) {
+          lastTextTap = { id: null, time: 0 };
+          const t = state.data.texts.find((x) => x.id === g.id);
+          onTextDoubleTap(t);
+        } else {
+          lastTextTap = { id: g.id, time: now };
+        }
         onRequestRender();
         return;
       }

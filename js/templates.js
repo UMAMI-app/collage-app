@@ -1,7 +1,7 @@
 // templates.js
 // Named, reusable style presets. Per spec, a template captures layout/canvas
-// size, background, spacing, corner radius, frame styling, and text
-// position/design/shadow — but NOT the actual photos.
+// size, background, spacing, corner radius, and text position/design/shadow
+// — but NOT the actual photos.
 
 import { uid } from "./state.js";
 
@@ -31,7 +31,7 @@ export function saveTemplate(name, data) {
     bgColor: data.bgColor,
     spacing: data.spacing,
     cornerRadius: data.cornerRadius,
-    frame: JSON.parse(JSON.stringify(data.frame)),
+    layoutVariant: data.layoutVariant || 0,
     texts: JSON.parse(JSON.stringify(data.texts)),
   };
   list.push(tpl);
@@ -52,7 +52,7 @@ export function applyTemplateToState(state, tpl) {
   d.bgColor = tpl.bgColor;
   d.spacing = tpl.spacing;
   d.cornerRadius = tpl.cornerRadius;
-  d.frame = JSON.parse(JSON.stringify(tpl.frame));
+  d.layoutVariant = tpl.layoutVariant || 0;
   d.texts = JSON.parse(JSON.stringify(tpl.texts)).map((t) => ({ ...t, id: t.id + "_" + Math.random().toString(36).slice(2, 7) }));
   if (tpl.photoCount !== d.photoCount) {
     const cur = d.photos;

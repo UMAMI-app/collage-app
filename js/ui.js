@@ -4,7 +4,7 @@
 // image registry / templates modules; does not own canvas drawing itself
 // (that's render.js, driven from main.js).
 
-import { ASPECT_RATIOS } from "./layout.js";
+import { ASPECT_RATIOS, ALT_LAYOUTS } from "./layout.js";
 import { imageRegistry, defaultTextObj, resizePhotoSlots } from "./state.js";
 import { listTemplates, saveTemplate, deleteTemplate, applyTemplateToState } from "./templates.js";
 import { exportJPEG } from "./export.js";
@@ -68,12 +68,12 @@ function wireContinuousStart(el, state) {
 /* ---------------- Editor screen ---------------- */
 
 export function initEditor(state, deps) {
-  const { requestRender, getCanvasSize } = deps;
+  const { requestRender, getCanvasSize, openInlineTextEditor } = deps;
 
   wireTabs();
   wireLayoutPanel(state, requestRender);
   wirePhotoPanel(state, requestRender, getCanvasSize);
-  wireTextPanel(state, requestRender, getCanvasSize);
+  wireTextPanel(state, requestRender, getCanvasSize, openInlineTextEditor);
   wireSelectedPanel(state, requestRender);
   wireTopbar(state, requestRender);
   wireTemplateModal(state, requestRender);
@@ -117,6 +117,7 @@ function wireLayoutPanel(state, requestRender) {
       if (state.data.photoCount === n) return;
       state.beginChange();
       resizePhotoSlots(state, n);
+      state.data.layoutVariant = 0;
       state.notify();
       requestRender();
     });
@@ -173,28 +174,58 @@ function wireLayoutPanel(state, requestRender) {
     requestRender();
   });
 
-  $("frameToggle").addEventListener("change", (e) => {
-    state.beginChange();
-    state.data.frame.enabled = e.target.checked;
-    state.notify();
-    requestRender();
-  });
+}
 
-  const frameWidthSlider = $("frameWidthSlider");
-  wireContinuousStart(frameWidthSlider, state);
-  frameWidthSlider.addEventListener("input", () => {
-    state.data.frame.thickness = Number(frameWidthSlider.value);
-    $("frameWidthVal").textContent = frameWidthSlider.value;
-    state.notify();
-    requestRender();
-  });
+/* ---- Layout variant picker (alternate arrangements for 2/6/8 photos) ---- */
 
-  const frameColorPicker = $("frameColorPicker");
-  wireContinuousStart(frameColorPicker, state);
-  frameColorPicker.addEventListener("input", () => {
-    state.data.frame.color = frameColorPicker.value;
-    state.notify();
-    requestRender();
+// Preview shape for the "standard" option, matched to computeLayout()'s
+// own grid rules for these specific counts.
+const STANDARD_LAYOUT_PREVIEW = {
+  2: { rows: 1, cols: 2 },
+  6: { rows: 3, cols: 2 },
+  8: { rows: 4, cols: 2 },
+};
+
+function buildMiniGridIcon(rows, cols) {
+  const el = document.createElement("div");
+  el.className = "mini-grid-icon";
+  el.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+  el.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  for (let i = 0; i < rows * cols; i++) {
+    const cell = document.createElement("div");
+    cell.className = "mini-grid-cell";
+    el.appendChild(cell);
+  }
+  return el;
+}
+
+function renderLayoutVariantPicker(state, requestRender) {
+  const row = $("layoutVariantRow");
+  const picker = $("layoutVariantPicker");
+  const count = state.data.photoCount;
+  const alt = ALT_LAYOUTS[count];
+
+  if (!alt) {
+    row.hidden = true;
+    return;
+  }
+  row.hidden = false;
+
+  const std = STANDARD_LAYOUT_PREVIEW[count];
+  picker.innerHTML = "";
+
+  [{ variant: 0, ...std }, { variant: 1, ...alt }].forEach(({ variant, rows, cols }) => {
+    const btn = document.createElement("button");
+    btn.className = "variant-btn" + ((state.data.layoutVariant || 0) === variant ? " active" : "");
+    btn.appendChild(buildMiniGridIcon(rows, cols));
+    btn.addEventListener("click", () => {
+      if ((state.data.layoutVariant || 0) === variant) return;
+      state.beginChange();
+      state.data.layoutVariant = variant;
+      state.notify();
+      requestRender();
+    });
+    picker.appendChild(btn);
   });
 }
 
@@ -279,7 +310,7 @@ function renderPhotoTray(state, requestRender) {
 
 /* ---- Text panel ---- */
 
-function wireTextPanel(state, requestRender, getCanvasSize) {
+function wireTextPanel(state, requestRender, getCanvasSize, openInlineTextEditor) {
   const addText = (orientation) => {
     state.beginChange();
     const { w, h } = getCanvasSize();
@@ -289,7 +320,7 @@ function wireTextPanel(state, requestRender, getCanvasSize) {
     state.notify();
     requestRender();
     switchToTab("panel-selected");
-    openTextEditor(t, state, requestRender);
+    openInlineTextEditor(t);
   };
   $("addTextBtnH").addEventListener("click", () => addText("horizontal"));
   $("addTextBtnV").addEventListener("click", () => addText("vertical"));
@@ -310,30 +341,6 @@ function renderTextList(state, requestRender) {
     });
     list.appendChild(chip);
   });
-}
-
-/* ---- Text edit overlay (content) ---- */
-
-export function openTextEditor(textObj, state, requestRender) {
-  const overlay = $("textEditOverlay");
-  const area = $("textEditArea");
-  overlay.hidden = false;
-  area.value = textObj.content;
-  area.focus();
-  let began = false;
-
-  const commit = () => {
-    if (!began) { state.beginChange(); began = true; }
-    textObj.content = area.value;
-    state.notify();
-    requestRender();
-  };
-  area.oninput = commit;
-
-  const close = () => { overlay.hidden = true; };
-  $("textEditDone").onclick = close;
-  $("textEditClose").onclick = close;
-  overlay.onclick = (e) => { if (e.target === overlay) close(); };
 }
 
 /* ---- Selected panel (photo / text properties) ---- */
@@ -634,9 +641,7 @@ export function syncAllFromState(state) {
   $("bgColorPicker").value = /^#/.test(d.bgColor) ? d.bgColor : "#ffffff";
   $("spacingSlider").value = d.spacing; $("spacingVal").textContent = d.spacing;
   $("radiusSlider").value = d.cornerRadius; $("radiusVal").textContent = d.cornerRadius;
-  $("frameToggle").checked = d.frame.enabled;
-  $("frameWidthSlider").value = d.frame.thickness; $("frameWidthVal").textContent = d.frame.thickness;
-  $("frameColorPicker").value = d.frame.color;
+  renderLayoutVariantPicker(state, () => {});
 
   renderPhotoTray(state, () => {});
   renderTextList(state, () => {});

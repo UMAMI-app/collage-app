@@ -53,20 +53,9 @@
   <main class="editor-main">
     <div class="canvas-wrap">
       <canvas id="mainCanvas"></canvas>
+      <textarea id="inlineTextEditArea" class="inline-text-editor" hidden spellcheck="false"></textarea>
     </div>
   </main>
-
-  <!-- テキスト編集モーダル(常に画面中央・確実に閉じられる) -->
-  <div id="textEditOverlay" class="modal" hidden>
-    <div class="modal-card">
-      <div class="text-edit-header">
-        <h2>テキストを編集</h2>
-        <button id="textEditClose" class="icon-btn" title="閉じる">✕</button>
-      </div>
-      <textarea id="textEditArea" placeholder="テキストを入力" rows="4"></textarea>
-      <button id="textEditDone" class="primary-btn">完了</button>
-    </div>
-  </div>
 
   <!-- 下部ツールバー(常時表示・タブ切替) -->
   <nav class="bottom-tabs">
@@ -90,8 +79,12 @@
         <div id="countPickerEditor" class="chip-row small"></div>
       </div>
       <div class="field-row">
-        <label>キャンバス比率</label>
+        <label>比率</label>
         <div id="ratioPickerEditor" class="chip-row small"></div>
+      </div>
+      <div class="field-row" id="layoutVariantRow" hidden>
+        <label>並び</label>
+        <div id="layoutVariantPicker" class="variant-row"></div>
       </div>
       <div class="field-row">
         <label>背景</label>
@@ -102,23 +95,12 @@
         </div>
       </div>
       <div class="field-row">
-        <label>写真間隔 <span id="spacingVal">8</span>px</label>
+        <label>フレーム <span id="spacingVal">8</span>px</label>
         <input type="range" id="spacingSlider" min="0" max="50" value="8">
       </div>
       <div class="field-row">
         <label>角丸 <span id="radiusVal">0</span>px</label>
         <input type="range" id="radiusSlider" min="0" max="100" value="0">
-      </div>
-      <div class="field-row">
-        <label>フレーム<input type="checkbox" id="frameToggle" checked></label>
-      </div>
-      <div class="field-row">
-        <label>太さ <span id="frameWidthVal">4</span>px</label>
-        <input type="range" id="frameWidthSlider" min="0" max="30" value="4">
-      </div>
-      <div class="field-row">
-        <label>フレーム色</label>
-        <input type="color" id="frameColorPicker" value="#ffffff">
       </div>
     </div>
 

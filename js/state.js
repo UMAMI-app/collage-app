@@ -57,7 +57,7 @@ export function createDefaultState(count, ratioId) {
     bgColor: "#ffffff",
     spacing: 8,
     cornerRadius: 0,
-    frame: { enabled: true, thickness: 4, color: "#ffffff" },
+    layoutVariant: 0, // 0 = standard grid; 1 = alternate (only meaningful for counts 2/6/8)
     photos: Array.from({ length: count }, defaultPhotoSlotData),
     texts: [],
     selection: null, // { type: 'photo', index } | { type: 'text', id } | null

@@ -1,14 +1,14 @@
 // render.js
 // Pure(ish) canvas drawing. Given a 2d context, the app state, and the
 // canvas pixel size, draws the full composition: background, photo cells
-// (clipped/rounded, with frame), and text layers (with drop shadow).
+// (clipped/rounded), and text layers (with drop shadow).
 // Also exposes geometry helpers shared with gestures.js for hit-testing.
 
 import { computeLayout, roundedRectPath } from "./layout.js";
 import { imageRegistry } from "./state.js";
 
 export function getCellRects(state, canvasW, canvasH) {
-  return computeLayout(state.photoCount, canvasW, canvasH, state.spacing);
+  return computeLayout(state.photoCount, canvasW, canvasH, state.spacing, state.layoutVariant || 0);
 }
 
 export function coverBaseScale(cellW, cellH, naturalW, naturalH) {
@@ -167,16 +167,6 @@ function drawPhotoInCell(ctx, cell, photo, cornerRadius) {
   }
 }
 
-function drawFrame(ctx, cell, frame, cornerRadius) {
-  if (!frame.enabled || frame.thickness <= 0) return;
-  ctx.save();
-  roundedRectPath(ctx, cell.x, cell.y, cell.w, cell.h, cornerRadius);
-  ctx.lineWidth = frame.thickness;
-  ctx.strokeStyle = frame.color;
-  ctx.stroke();
-  ctx.restore();
-}
-
 function drawSelectionOutline(ctx, rect, rotation = 0) {
   ctx.save();
   if (rotation) {
@@ -232,7 +222,6 @@ export function renderCanvas(ctx, state, canvasW, canvasH, opts = {}) {
     }
 
     drawPhotoInCell(ctx, cell, photo, state.cornerRadius);
-    drawFrame(ctx, cell, state.frame, state.cornerRadius);
 
     if (lifted) ctx.restore();
   });

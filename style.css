@@ -208,17 +208,24 @@ button { font-family: inherit; }
   margin-bottom: 12px;
 }
 .text-edit-header h2 { margin: 0; font-size: 17px; }
-#textEditArea {
-  width: 100%;
-  min-height: 110px;
-  background: var(--panel-2);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px;
-  resize: vertical;
-  font-size: 15px;
-  margin-bottom: 12px;
+
+/* Double-tap-to-edit: a borderless textarea placed directly over the text
+   on the canvas, sized/positioned/colored to match it, so editing feels
+   in-place rather than opening a separate popup. */
+.inline-text-editor {
+  position: absolute;
+  box-sizing: border-box;
+  background: rgba(127, 127, 127, 0.18);
+  border: 2px dashed var(--accent);
+  border-radius: 4px;
+  padding: 0;
+  margin: 0;
+  resize: none;
+  outline: none;
+  overflow: hidden;
+  white-space: pre;
+  font-family: inherit;
+  text-align: center;
 }
 
 .bottom-tabs {
@@ -342,6 +349,45 @@ button { font-family: inherit; }
 .swatch { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border); cursor: pointer; }
 .swatch.white { background: #fff; }
 .swatch.black { background: #000; }
+
+/* Custom-color entry point: always shows a rainbow palette icon (the picked
+   color is already visible live on the canvas itself, so this button's job
+   is just to say "tap here for any color" rather than mirror the value). */
+#bgColorPicker {
+  background: conic-gradient(red, #ff0, lime, cyan, blue, magenta, red);
+}
+#bgColorPicker::-webkit-color-swatch {
+  background: conic-gradient(red, #ff0, lime, cyan, blue, magenta, red);
+  border: none;
+  border-radius: 4px;
+}
+#bgColorPicker::-moz-color-swatch {
+  background: conic-gradient(red, #ff0, lime, cyan, blue, magenta, red);
+  border: none;
+  border-radius: 4px;
+}
+
+.variant-row { display: flex; gap: 10px; }
+.variant-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  cursor: pointer;
+}
+.variant-btn.active { border-color: var(--accent); background: var(--panel-2); }
+.mini-grid-icon {
+  display: grid;
+  gap: 2px;
+  width: 44px;
+  height: 34px;
+}
+.mini-grid-cell { background: var(--text-dim); border-radius: 2px; }
+.variant-btn.active .mini-grid-cell { background: var(--accent); }
 
 .toggle-btn {
   padding: 8px 12px;

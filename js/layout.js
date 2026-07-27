@@ -48,19 +48,47 @@ export function exportPixelSize(ratioId, longSide = 2048) {
   return { w, h };
 }
 
+// Alternate ("variant 1") arrangements, offered only for these counts.
+// Expressed as a uniform rows x cols grid.
+export const ALT_LAYOUTS = {
+  2: { rows: 2, cols: 1 }, // stacked top/bottom instead of side by side
+  6: { rows: 2, cols: 3 }, // wide 3-across instead of tall 2-across
+  8: { rows: 2, cols: 4 }, // wide 4-across instead of tall 2-across
+};
+
+function computeUniformGrid(rows, cols, canvasW, canvasH, spacing, count) {
+  const rowH = (canvasH - spacing * (rows + 1)) / rows;
+  const colW = (canvasW - spacing * (cols + 1)) / cols;
+  const cells = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = spacing + c * (colW + spacing);
+      const y = spacing + r * (rowH + spacing);
+      cells.push({ x, y, w: colW, h: rowH });
+    }
+  }
+  return cells.slice(0, count);
+}
+
 /**
  * Compute cell rects for a given photo count.
  * @param {number} count 1..10
  * @param {number} canvasW
  * @param {number} canvasH
  * @param {number} spacing px, used both as outer margin and inter-cell gap
+ * @param {number} variant 0 = standard, 1 = alternate (only for counts in ALT_LAYOUTS)
  * @returns {Array<{x:number,y:number,w:number,h:number}>}
  */
-export function computeLayout(count, canvasW, canvasH, spacing) {
+export function computeLayout(count, canvasW, canvasH, spacing, variant = 0) {
   count = Math.max(1, Math.min(10, count));
 
   if (count === 1) {
     return [{ x: 0, y: 0, w: canvasW, h: canvasH }];
+  }
+
+  if (variant === 1 && ALT_LAYOUTS[count]) {
+    const { rows, cols } = ALT_LAYOUTS[count];
+    return computeUniformGrid(rows, cols, canvasW, canvasH, spacing, count);
   }
 
   const isOdd = count % 2 === 1;
