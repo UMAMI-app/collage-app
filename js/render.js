@@ -188,11 +188,12 @@ function drawSelectionOutline(ctx, rect, rotation = 0) {
  * @param {object} state (state.data)
  * @param {number} canvasW
  * @param {number} canvasH
- * @param {object} opts { forExport?: boolean, liftedIndex?: number|null }
+ * @param {object} opts { forExport?: boolean, liftedIndex?: number|null, editingTextId?: string|null }
  */
 export function renderCanvas(ctx, state, canvasW, canvasH, opts = {}) {
   const forExport = !!opts.forExport;
   const liftedIndex = opts.liftedIndex ?? null;
+  const editingTextId = opts.editingTextId ?? null;
   ctx.clearRect(0, 0, canvasW, canvasH);
   ctx.fillStyle = state.bgColor;
   ctx.fillRect(0, 0, canvasW, canvasH);
@@ -227,6 +228,7 @@ export function renderCanvas(ctx, state, canvasW, canvasH, opts = {}) {
   });
 
   for (const t of state.texts) {
+    if (!forExport && editingTextId && t.id === editingTextId) continue;
     drawTextObject(ctx, t);
   }
 

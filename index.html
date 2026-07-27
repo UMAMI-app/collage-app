@@ -59,21 +59,16 @@
 
   <!-- 下部ツールバー(常時表示・タブ切替) -->
   <nav class="bottom-tabs">
-    <button class="tab-btn active" data-panel="panel-photos">写真</button>
-    <button class="tab-btn" data-panel="panel-layout">レイアウト</button>
+    <button class="tab-btn active" data-panel="panel-layout">レイアウト</button>
     <button class="tab-btn" data-panel="panel-text">テキスト</button>
     <button class="tab-btn" data-panel="panel-selected">選択中</button>
   </nav>
 
+  <input type="file" id="fileInput" accept="image/*" multiple hidden>
+
   <section class="bottom-sheet">
 
-    <div id="panel-photos" class="panel active">
-      <div class="row-scroll" id="photoTray"></div>
-      <p class="hint">写真がない枠をタップすると追加できます</p>
-      <input type="file" id="fileInput" accept="image/*" multiple hidden>
-    </div>
-
-    <div id="panel-layout" class="panel">
+    <div id="panel-layout" class="panel active">
       <div class="field-row">
         <label>枚数</label>
         <div id="countPickerEditor" class="chip-row small"></div>
@@ -95,7 +90,7 @@
         </div>
       </div>
       <div class="field-row">
-        <label>フレーム <span id="spacingVal">8</span>px</label>
+        <label>枠 <span id="spacingVal">8</span>px</label>
         <input type="range" id="spacingSlider" min="0" max="50" value="8">
       </div>
       <div class="field-row">
@@ -109,7 +104,6 @@
         <button id="addTextBtnH" class="secondary-btn">＋横書きテキスト追加</button>
         <button id="addTextBtnV" class="secondary-btn">＋縦書きテキスト追加</button>
       </div>
-      <div id="textList" class="row-scroll"></div>
     </div>
 
     <div id="panel-selected" class="panel">

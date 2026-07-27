@@ -21,6 +21,7 @@ const ctx = canvas.getContext("2d");
 
 let state = null;
 let liftedPhotoIndex = null;
+let editingTextId = null;
 
 /** Force every modal/overlay closed. Mobile Safari can restore a page from its
  *  back-forward cache with whatever DOM state it had when you navigated away
@@ -46,7 +47,7 @@ function syncCanvasPixelSize() {
 function requestRender() {
   if (!state) return;
   const { w, h } = syncCanvasPixelSize();
-  renderCanvas(ctx, state.data, w, h, { forExport: false, liftedIndex: liftedPhotoIndex });
+  renderCanvas(ctx, state.data, w, h, { forExport: false, liftedIndex: liftedPhotoIndex, editingTextId });
 }
 
 /** Double-tap-to-edit: positions a borderless textarea directly over the
@@ -78,6 +79,12 @@ function openInlineTextEditor(textObj) {
   area.style.writingMode = textObj.orientation === "vertical" ? "vertical-rl" : "horizontal-tb";
   area.style.textAlign = textObj.orientation === "vertical" ? "center" : (textObj.align || "center");
 
+  // Hide the canvas-drawn copy of this text object while the overlay
+  // textarea is showing it, otherwise the two overlap and look like a
+  // doubled/drop-shadowed duplicate of the text.
+  editingTextId = textObj.id;
+  requestRender();
+
   area.hidden = false;
   area.value = textObj.content;
 
@@ -93,6 +100,8 @@ function openInlineTextEditor(textObj) {
     area.hidden = true;
     area.oninput = null;
     area.onblur = null;
+    editingTextId = null;
+    requestRender();
   };
 
   requestAnimationFrame(() => {

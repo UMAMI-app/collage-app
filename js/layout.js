@@ -54,6 +54,7 @@ export const ALT_LAYOUTS = {
   2: { rows: 2, cols: 1 }, // stacked top/bottom instead of side by side
   6: { rows: 2, cols: 3 }, // wide 3-across instead of tall 2-across
   8: { rows: 2, cols: 4 }, // wide 4-across instead of tall 2-across
+  10: { rows: 2, cols: 5 }, // wide 5-across instead of tall 2-across
 };
 
 function computeUniformGrid(rows, cols, canvasW, canvasH, spacing, count) {

@@ -184,6 +184,7 @@ const STANDARD_LAYOUT_PREVIEW = {
   2: { rows: 1, cols: 2 },
   6: { rows: 3, cols: 2 },
   8: { rows: 4, cols: 2 },
+  10: { rows: 5, cols: 2 },
 };
 
 function buildMiniGridIcon(rows, cols) {
@@ -276,38 +277,6 @@ export function requestPhotoForSlot(index) {
   $("fileInput").click();
 }
 
-function renderPhotoTray(state, requestRender) {
-  const tray = $("photoTray");
-  tray.innerHTML = "";
-  state.data.photos.forEach((p, i) => {
-    const el = document.createElement("div");
-    el.className = "photo-thumb" + (state.data.selection?.type === "photo" && state.data.selection.index === i ? " selected" : "");
-    const badge = document.createElement("div");
-    badge.className = "slot-badge";
-    badge.textContent = i + 1;
-    el.appendChild(badge);
-    if (p) {
-      const entry = imageRegistry.get(p.imgId);
-      if (entry) {
-        const img = document.createElement("img");
-        img.src = entry.url;
-        el.appendChild(img);
-      }
-    }
-    el.addEventListener("click", () => {
-      if (!p) {
-        requestPhotoForSlot(i);
-        return;
-      }
-      state.data.selection = { type: "photo", index: i };
-      state.notify();
-      requestRender();
-      switchToTab("panel-selected");
-    });
-    tray.appendChild(el);
-  });
-}
-
 /* ---- Text panel ---- */
 
 function wireTextPanel(state, requestRender, getCanvasSize, openInlineTextEditor) {
@@ -324,23 +293,6 @@ function wireTextPanel(state, requestRender, getCanvasSize, openInlineTextEditor
   };
   $("addTextBtnH").addEventListener("click", () => addText("horizontal"));
   $("addTextBtnV").addEventListener("click", () => addText("vertical"));
-}
-
-function renderTextList(state, requestRender) {
-  const list = $("textList");
-  list.innerHTML = "";
-  state.data.texts.forEach((t) => {
-    const chip = document.createElement("div");
-    chip.className = "text-chip" + (state.data.selection?.type === "text" && state.data.selection.id === t.id ? " selected" : "");
-    chip.textContent = t.content || "(空のテキスト)";
-    chip.addEventListener("click", () => {
-      state.data.selection = { type: "text", id: t.id };
-      state.notify();
-      requestRender();
-      switchToTab("panel-selected");
-    });
-    list.appendChild(chip);
-  });
 }
 
 /* ---- Selected panel (photo / text properties) ---- */
@@ -642,9 +594,6 @@ export function syncAllFromState(state) {
   $("spacingSlider").value = d.spacing; $("spacingVal").textContent = d.spacing;
   $("radiusSlider").value = d.cornerRadius; $("radiusVal").textContent = d.cornerRadius;
   renderLayoutVariantPicker(state, () => {});
-
-  renderPhotoTray(state, () => {});
-  renderTextList(state, () => {});
 
   const sel = d.selection;
   $("noSelection").hidden = !!sel;

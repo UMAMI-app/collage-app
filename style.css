@@ -348,33 +348,16 @@ button { font-family: inherit; }
 .bg-swatches { display: flex; gap: 8px; align-items: center; }
 .swatch { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border); cursor: pointer; }
 .swatch.white { background: #fff; }
-.swatch.black { background: #000; }
+.swatch.black { background: #000; margin-right: 6px; }
 
-/* Custom-color entry point: always shows a rainbow palette icon (the picked
-   color is already visible live on the canvas itself, so this button's job
-   is just to say "tap here for any color" rather than mirror the value). */
-#bgColorPicker {
-  background: conic-gradient(red, #ff0, lime, cyan, blue, magenta, red);
-}
-#bgColorPicker::-webkit-color-swatch {
-  background: conic-gradient(red, #ff0, lime, cyan, blue, magenta, red);
-  border: none;
-  border-radius: 4px;
-}
-#bgColorPicker::-moz-color-swatch {
-  background: conic-gradient(red, #ff0, lime, cyan, blue, magenta, red);
-  border: none;
-  border-radius: 4px;
-}
-
-.variant-row { display: flex; gap: 10px; }
+.variant-row { display: flex; gap: 8px; }
 .variant-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
-  border-radius: 10px;
+  gap: 3px;
+  padding: 5px 8px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--panel);
   cursor: pointer;
@@ -383,8 +366,8 @@ button { font-family: inherit; }
 .mini-grid-icon {
   display: grid;
   gap: 2px;
-  width: 44px;
-  height: 34px;
+  width: 35px;
+  height: 27px;
 }
 .mini-grid-cell { background: var(--text-dim); border-radius: 2px; }
 .variant-btn.active .mini-grid-cell { background: var(--accent); }
