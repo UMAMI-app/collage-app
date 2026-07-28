@@ -275,9 +275,22 @@ button { font-family: inherit; }
 }
 .tab-btn.active { color: var(--text); border-top-color: var(--accent); background: var(--panel-2); }
 
+.chevron-btn {
+  flex: 0 0 auto;
+  width: 40px;
+  background: var(--panel);
+  color: var(--text-dim);
+  border: none;
+  border-left: 1px solid var(--border);
+  font-size: 13px;
+  cursor: pointer;
+}
+
 .bottom-sheet {
   flex: 0 0 auto;
-  height: 42vh; /* fixed (not max-height) so every tab renders at the same height */
+  /* height is set inline by JS, pinned to panel-layout's natural content
+     height (the shorter tab) so there's no wasted space on that tab; the
+     taller テキスト tab's extra content just scrolls within the same height. */
   overflow-y: auto;
   background: var(--panel-2);
   padding: 14px;
@@ -453,6 +466,4 @@ button { font-family: inherit; }
 }
 .template-row button.danger { color: var(--danger); }
 
-@media (min-width: 900px) {
-  .bottom-sheet { height: 34vh; }
-}
+.bottom-sheet.collapsed { display: none; }

@@ -69,6 +69,7 @@ export function initEditor(state, deps) {
   const { requestRender, getCanvasSize, openInlineTextEditor } = deps;
 
   wireTabs();
+  wireCollapseToggle(requestRender);
   wireLayoutPanel(state, requestRender);
   wirePhotoPanel(state, requestRender, getCanvasSize);
   wireTextPanel(state, requestRender, getCanvasSize, openInlineTextEditor);
@@ -85,6 +86,36 @@ export function initEditor(state, deps) {
   syncAllFromState(state);
   updateUndoRedoButtons(state);
   requestRender();
+
+  window.addEventListener("resize", pinSheetHeightToLayoutTab);
+}
+
+/** Pins the bottom-sheet's height to however tall panel-layout (the shorter
+ *  tab) naturally needs to be, instead of a fixed vh guess sized for the
+ *  taller テキスト tab - which left visible empty space under the shorter
+ *  レイアウト tab's content. The テキスト tab's extra content now just
+ *  scrolls within that same height rather than growing the sheet.
+ *  Works even when panel-layout isn't the active tab (e.g. measuring on
+ *  resize while テキスト is showing) by briefly rendering it off-screen at
+ *  its normal in-flow width, rather than relying on display:none's 0 height. */
+function pinSheetHeightToLayoutTab() {
+  const sheet = document.querySelector(".bottom-sheet");
+  const layoutPanel = $("panel-layout");
+  const csSheet = getComputedStyle(sheet);
+  const paddingV = parseFloat(csSheet.paddingTop) + parseFloat(csSheet.paddingBottom);
+
+  let measuredHeight;
+  if (layoutPanel.classList.contains("active")) {
+    measuredHeight = layoutPanel.scrollHeight;
+  } else {
+    const contentWidth = sheet.clientWidth - parseFloat(csSheet.paddingLeft) - parseFloat(csSheet.paddingRight);
+    const prevCssText = layoutPanel.style.cssText;
+    layoutPanel.style.cssText = `display:block; position:absolute; visibility:hidden; pointer-events:none; width:${contentWidth}px;`;
+    measuredHeight = layoutPanel.scrollHeight;
+    layoutPanel.style.cssText = prevCssText;
+  }
+
+  sheet.style.height = `${measuredHeight + paddingV}px`;
 }
 
 function wireTabs() {
@@ -94,6 +125,7 @@ function wireTabs() {
       tabs.forEach((b) => b.classList.toggle("active", b === btn));
       document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
       $(btn.dataset.panel).classList.add("active");
+      expandSheet();
     });
   });
 }
@@ -101,6 +133,33 @@ function wireTabs() {
 export function switchToTab(panelId) {
   document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.panel === panelId));
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === panelId));
+  expandSheet();
+}
+
+function expandSheet() {
+  const sheet = document.querySelector(".bottom-sheet");
+  const btn = $("collapseSheetBtn");
+  if (sheet.classList.contains("collapsed")) {
+    sheet.classList.remove("collapsed");
+    btn.textContent = "▽";
+    btn.title = "設定を隠す";
+  }
+}
+
+/** Wires the ▽/△ chevron that collapses the bottom-sheet down to just the
+ *  tab row, reclaiming canvas space once the user is done adjusting things.
+ *  requestRender is re-run afterward since the canvas's on-screen (CSS) size
+ *  changes when the sheet's height changes, and things like the photo/text
+ *  action bars and inline text editor are positioned from that size. */
+function wireCollapseToggle(requestRender) {
+  const btn = $("collapseSheetBtn");
+  const sheet = document.querySelector(".bottom-sheet");
+  btn.addEventListener("click", () => {
+    const collapsed = sheet.classList.toggle("collapsed");
+    btn.textContent = collapsed ? "△" : "▽";
+    btn.title = collapsed ? "設定を表示" : "設定を隠す";
+    requestRender();
+  });
 }
 
 /* ---- Layout panel ---- */
@@ -426,13 +485,6 @@ function wireTextProps(state, requestRender) {
     state.notify(); requestRender();
   });
 
-  $("deleteTextBtn").addEventListener("click", () => {
-    const t = currentText(state); if (!t) return;
-    state.beginChange();
-    state.data.texts = state.data.texts.filter((x) => x.id !== t.id);
-    state.data.selection = null;
-    state.notify(); requestRender();
-  });
 }
 
 function toggleTextFlag(state, requestRender, key, btn) {
@@ -565,6 +617,9 @@ export function syncAllFromState(state) {
   $("spacingSlider").value = d.spacing; $("spacingVal").textContent = d.spacing;
   $("radiusSlider").value = d.cornerRadius; $("radiusVal").textContent = d.cornerRadius;
   renderLayoutVariantPicker(state, () => {});
+  // 並び row's visibility depends on photoCount, which can change panel-layout's
+  // natural height (e.g. via undo/redo or applying a template) - re-pin.
+  pinSheetHeightToLayoutTab();
 
   // The add-buttons row and the settings below it are both always visible
   // in the テキスト tab now; the settings just reflect whichever text is
