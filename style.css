@@ -99,7 +99,7 @@ button { font-family: inherit; }
   cursor: pointer;
   margin-top: 6px;
 }
-.primary-btn.small { width: auto; padding: 9px 16px; font-size: 14px; }
+.primary-btn.small { width: auto; padding: 9px 16px; font-size: 14px; margin-top: 0; }
 .secondary-btn {
   padding: 10px 14px;
   border-radius: 10px;
@@ -297,7 +297,6 @@ button { font-family: inherit; }
   overflow-y: auto;
   background: var(--panel-2);
   padding: 14px;
-  border-top: 1px solid var(--border);
 }
 .panel { display: none; }
 .panel.active { display: block; }
@@ -371,6 +370,12 @@ button { font-family: inherit; }
   color: var(--text);
   padding: 8px;
   border-radius: 8px;
+}
+/* Match the template-name field to the modal's close button (same height
+   and font-size) so the row reads as one consistent control group. */
+#templateNameInput {
+  height: 38px;
+  font-size: 18px;
 }
 /* iOS Safari renders input[type=color] as a circle by default; force a
    square swatch on every platform instead. */
