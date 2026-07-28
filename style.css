@@ -233,6 +233,18 @@ button { font-family: inherit; }
   text-align: center;
 }
 
+/* Floating action bar shown above a selected photo cell (delete / rotate). */
+.photo-action-bar {
+  position: absolute;
+  display: flex;
+  gap: 8px;
+  z-index: 5;
+}
+.photo-action-bar .round-icon-btn.danger {
+  background: var(--danger);
+  color: #fff;
+}
+
 .bottom-tabs {
   display: flex;
   flex: 0 0 auto;

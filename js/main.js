@@ -5,11 +5,12 @@
 
 import { AppState, createDefaultState, imageRegistry } from "./state.js";
 import { canvasPixelSize } from "./layout.js";
-import { renderCanvas, textLocalBounds } from "./render.js";
+import { renderCanvas, textLocalBounds, getCellRects } from "./render.js";
 import { attachGestures } from "./gestures.js";
 import { initEditor, requestPhotoForSlot, switchToTab } from "./ui.js";
 
 const inlineTextEditArea = document.getElementById("inlineTextEditArea");
+const photoActionBar = document.getElementById("photoActionBar");
 
 const DEFAULT_PHOTO_COUNT = 4;
 const DEFAULT_RATIO_ID = "1:1";
@@ -48,6 +49,39 @@ function requestRender() {
   if (!state) return;
   const { w, h } = syncCanvasPixelSize();
   renderCanvas(ctx, state.data, w, h, { forExport: false, liftedIndex: liftedPhotoIndex, editingTextId });
+  updatePhotoActionBar();
+}
+
+/** Positions the floating delete/rotate action bar over the currently
+ *  selected photo cell (CSS pixels, converted from canvas pixel space),
+ *  and hides it whenever a photo isn't selected. */
+function updatePhotoActionBar() {
+  const sel = state.data.selection;
+  if (!sel || sel.type !== "photo" || !state.data.photos[sel.index]) {
+    photoActionBar.hidden = true;
+    return;
+  }
+  const cells = getCellRects(state.data, canvas.width, canvas.height);
+  const cell = cells[sel.index];
+  if (!cell) {
+    photoActionBar.hidden = true;
+    return;
+  }
+
+  const rect = canvas.getBoundingClientRect();
+  const wrapRect = canvas.parentElement.getBoundingClientRect();
+  const scaleX = rect.width / canvas.width;
+  const scaleY = rect.height / canvas.height;
+  const canvasOffsetLeft = rect.left - wrapRect.left;
+  const canvasOffsetTop = rect.top - wrapRect.top;
+
+  const cx = canvasOffsetLeft + (cell.x + cell.w / 2) * scaleX;
+  const topY = canvasOffsetTop + cell.y * scaleY;
+
+  photoActionBar.style.left = `${cx}px`;
+  photoActionBar.style.top = `${Math.max(4, topY + 8)}px`;
+  photoActionBar.style.transform = "translateX(-50%)";
+  photoActionBar.hidden = false;
 }
 
 /** Double-tap-to-edit: positions a borderless textarea directly over the
@@ -160,6 +194,27 @@ function bootEditor() {
     requestRender,
     getCanvasSize: () => ({ w: canvas.width, h: canvas.height }),
     openInlineTextEditor,
+  });
+
+  document.getElementById("photoRotateBtn").addEventListener("click", () => {
+    const sel = state.data.selection;
+    if (!sel || sel.type !== "photo") return;
+    const p = state.data.photos[sel.index];
+    if (!p) return;
+    state.beginChange();
+    p.rotation = ((p.rotation || 0) + 90) % 360;
+    state.notify();
+    requestRender();
+  });
+
+  document.getElementById("photoDeleteBtn").addEventListener("click", () => {
+    const sel = state.data.selection;
+    if (!sel || sel.type !== "photo") return;
+    state.beginChange();
+    state.data.photos[sel.index] = null;
+    state.data.selection = null;
+    state.notify();
+    requestRender();
   });
 
   window.addEventListener("resize", requestRender);

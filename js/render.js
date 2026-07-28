@@ -130,7 +130,7 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-function drawPhotoInCell(ctx, cell, photo, cornerRadius) {
+function drawPhotoInCell(ctx, cell, photo, cornerRadius, bgColor) {
   const entry = photo ? imageRegistry.get(photo.imgId) : null;
 
   ctx.save();
@@ -145,26 +145,12 @@ function drawPhotoInCell(ctx, cell, photo, cornerRadius) {
     ctx.scale(totalScale, totalScale);
     ctx.drawImage(entry.img, -entry.naturalW / 2, -entry.naturalH / 2, entry.naturalW, entry.naturalH);
   } else {
-    ctx.fillStyle = "rgba(128,128,128,0.14)";
+    // Empty slot: blend into the canvas background (no gray/dashed/plus
+    // placeholder) so it looks intentional both on-screen and in exports.
+    ctx.fillStyle = bgColor;
     ctx.fillRect(cell.x, cell.y, cell.w, cell.h);
   }
   ctx.restore();
-
-  if (!entry) {
-    ctx.save();
-    roundedRectPath(ctx, cell.x, cell.y, cell.w, cell.h, cornerRadius);
-    ctx.setLineDash([8, 6]);
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = "rgba(128,128,128,0.5)";
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = "rgba(128,128,128,0.6)";
-    ctx.font = `${Math.max(20, Math.min(cell.w, cell.h) * 0.25)}px sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("+", cell.x + cell.w / 2, cell.y + cell.h / 2);
-    ctx.restore();
-  }
 }
 
 function drawSelectionOutline(ctx, rect, rotation = 0) {
@@ -222,7 +208,7 @@ export function renderCanvas(ctx, state, canvasW, canvasH, opts = {}) {
       ctx.restore();
     }
 
-    drawPhotoInCell(ctx, cell, photo, state.cornerRadius);
+    drawPhotoInCell(ctx, cell, photo, state.cornerRadius, state.bgColor);
 
     if (lifted) ctx.restore();
   });
