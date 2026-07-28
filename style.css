@@ -346,7 +346,7 @@ button { font-family: inherit; }
   align-items: center;
   gap: 6px;
 }
-.field-row input[type="range"] { flex: 1; }
+.field-row input[type="range"] { flex: 1; accent-color: var(--accent); }
 .field-row input[type="text"] {
   flex: 1;
   background: var(--panel);

@@ -29,11 +29,20 @@ export function attachGestures(canvas, ctx, state, callbacks) {
     onTextDoubleTap, // (textObj) => void - double-tap: edit in place
     onEmptyCellTap, // (index) => void
     onLiftChange = () => {}, // (index|null) => void - photo "picked up" for reorder
+    onPhotoManipulating = () => {}, // (active:boolean) => void - true while a pinch/drag/reorder is actively changing a photo
   } = callbacks;
 
   const pointers = new Map(); // pointerId -> {x,y}
   let gesture = null; // active single/double pointer gesture info
   let lastTextTap = { id: null, time: 0 }; // for double-tap detection on text
+  let manipulating = false; // mirrors onPhotoManipulating's last-sent value
+
+  function setManipulating(v) {
+    if (manipulating !== v) {
+      manipulating = v;
+      onPhotoManipulating(v);
+    }
+  }
 
   function toCanvasXY(evt) {
     const rect = canvas.getBoundingClientRect();
@@ -100,6 +109,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
             state.data.selection = { type: "photo", index: hit.index };
             onSelectionChange(state.data.selection);
             onLiftChange(hit.index);
+            setManipulating(true);
             onRequestRender();
           }
         }, LONG_PRESS_MS),
@@ -144,6 +154,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
       const a0 = angleDeg(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
       gesture.pinch = { d0, a0 };
       ensureChangeBegun(gesture);
+      if (gesture.kind === "photo") setManipulating(true);
     }
   }
 
@@ -198,6 +209,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
       }
       if (movedDist > TAP_MAX_MOVE_PX) {
         gesture.moved = true;
+        setManipulating(true);
         ensureChangeBegun(gesture);
         const p = state.data.photos[gesture.index];
         if (p) {
@@ -264,6 +276,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
       clearTimeout(g.longPressTimer);
       if (g.longPressFired) {
         onLiftChange(null);
+        setManipulating(false);
         if (g.hoverIndex != null && g.hoverIndex !== g.index) {
           state.beginChange();
           const arr = state.data.photos;
@@ -279,6 +292,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
         onRequestRender();
         return;
       }
+      setManipulating(false);
       state.notify();
       return;
     }
@@ -316,6 +330,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
       clearTimeout(gesture.longPressTimer);
       onLiftChange(null);
     }
+    if (gesture && gesture.kind === "photo") setManipulating(false);
     gesture = null;
   }
 

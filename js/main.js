@@ -23,6 +23,7 @@ const ctx = canvas.getContext("2d");
 let state = null;
 let liftedPhotoIndex = null;
 let editingTextId = null;
+let photoManipulating = false; // true while pinch/drag/reorder is actively changing the selected photo
 
 /** Force every modal/overlay closed. Mobile Safari can restore a page from its
  *  back-forward cache with whatever DOM state it had when you navigated away
@@ -57,7 +58,7 @@ function requestRender() {
  *  and hides it whenever a photo isn't selected. */
 function updatePhotoActionBar() {
   const sel = state.data.selection;
-  if (!sel || sel.type !== "photo" || !state.data.photos[sel.index]) {
+  if (photoManipulating || !sel || sel.type !== "photo" || !state.data.photos[sel.index]) {
     photoActionBar.hidden = true;
     return;
   }
@@ -188,6 +189,7 @@ function bootEditor() {
     onTextDoubleTap: (t) => openInlineTextEditor(t),
     onEmptyCellTap: (index) => requestPhotoForSlot(index),
     onLiftChange: (index) => { liftedPhotoIndex = index; requestRender(); },
+    onPhotoManipulating: (active) => { photoManipulating = active; requestRender(); },
   });
 
   initEditor(state, {
