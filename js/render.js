@@ -130,7 +130,7 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-function drawPhotoInCell(ctx, cell, photo, cornerRadius, bgColor) {
+function drawPhotoInCell(ctx, cell, photo, cornerRadius, bgColor, forExport) {
   const entry = photo ? imageRegistry.get(photo.imgId) : null;
 
   ctx.save();
@@ -144,11 +144,21 @@ function drawPhotoInCell(ctx, cell, photo, cornerRadius, bgColor) {
     ctx.rotate(((photo.rotation || 0) * Math.PI) / 180);
     ctx.scale(totalScale, totalScale);
     ctx.drawImage(entry.img, -entry.naturalW / 2, -entry.naturalH / 2, entry.naturalW, entry.naturalH);
-  } else {
-    // Empty slot: blend into the canvas background (no gray/dashed/plus
-    // placeholder) so it looks intentional both on-screen and in exports.
+  } else if (forExport) {
+    // Empty slot in the exported image: blend into the background cleanly,
+    // no editor-only placeholder decoration.
     ctx.fillStyle = bgColor;
     ctx.fillRect(cell.x, cell.y, cell.w, cell.h);
+  } else {
+    // Empty slot in the editor: light gray + centered "+" so it's clear
+    // the cell is tappable to add a photo.
+    ctx.fillStyle = "rgba(128,128,128,0.14)";
+    ctx.fillRect(cell.x, cell.y, cell.w, cell.h);
+    ctx.fillStyle = "rgba(128,128,128,0.6)";
+    ctx.font = `${Math.max(20, Math.min(cell.w, cell.h) * 0.25)}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("+", cell.x + cell.w / 2, cell.y + cell.h / 2);
   }
   ctx.restore();
 }
@@ -162,7 +172,7 @@ function drawSelectionOutline(ctx, rect, rotation = 0) {
   }
   ctx.setLineDash([6, 4]);
   ctx.lineWidth = 2;
-  ctx.strokeStyle = "#4f8cff";
+  ctx.strokeStyle = "#000000";
   ctx.strokeRect(rect.x - 3, rect.y - 3, rect.w + 6, rect.h + 6);
   ctx.setLineDash([]);
   ctx.restore();
@@ -208,7 +218,7 @@ export function renderCanvas(ctx, state, canvasW, canvasH, opts = {}) {
       ctx.restore();
     }
 
-    drawPhotoInCell(ctx, cell, photo, state.cornerRadius, state.bgColor);
+    drawPhotoInCell(ctx, cell, photo, state.cornerRadius, state.bgColor, forExport);
 
     if (lifted) ctx.restore();
   });

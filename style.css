@@ -5,7 +5,7 @@
   --border: #dcdce1;
   --text: #1c1c1e;
   --text-dim: #6e6e76;
-  --accent: #4f8cff;
+  --accent: #000000;
   --danger: #ff3b30;
   --radius: 14px;
 }
@@ -64,6 +64,11 @@ button { font-family: inherit; }
   flex-wrap: nowrap;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge */
+}
+.chip-row.small::-webkit-scrollbar {
+  display: none; /* Safari/Chrome */
 }
 .chip-row.small .chip { padding: 6px 10px; font-size: 12px; flex: 0 0 auto; }
 .chip {
@@ -239,6 +244,13 @@ button { font-family: inherit; }
   display: flex;
   gap: 8px;
   z-index: 5;
+}
+/* Setting `display` on a class overrides the browser's default [hidden]
+   rule (author styles beat user-agent styles regardless of specificity -
+   same gotcha fixed earlier for .modal/.screen), so without this the bar
+   never actually disappears when its hidden attribute is set. */
+.photo-action-bar[hidden] {
+  display: none !important;
 }
 .photo-action-bar .round-icon-btn.danger {
   background: var(--danger);
