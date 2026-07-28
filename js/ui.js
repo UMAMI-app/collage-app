@@ -149,7 +149,7 @@ function expandSheet() {
   if (sheet.classList.contains("collapsed")) {
     sheet.classList.remove("collapsed");
     document.querySelector(".bottom-tabs").classList.remove("sheet-collapsed");
-    btn.textContent = "▽";
+    btn.textContent = "▼";
     btn.title = "設定を隠す";
     // The sheet was skipping re-measurement the whole time it was hidden
     // (see pinSheetHeightToLayoutTab), so take one fresh measurement now
@@ -158,7 +158,7 @@ function expandSheet() {
   }
 }
 
-/** Wires the ▽/△ chevron that collapses the bottom-sheet down to just the
+/** Wires the ▼/▲ chevron that collapses the bottom-sheet down to just the
  *  tab row, reclaiming canvas space once the user is done adjusting things.
  *  requestRender is re-run afterward since the canvas's on-screen (CSS) size
  *  changes when the sheet's height changes, and things like the photo/text
@@ -173,7 +173,7 @@ function wireCollapseToggle(requestRender) {
     } else {
       sheet.classList.add("collapsed");
       tabs.classList.add("sheet-collapsed");
-      btn.textContent = "△";
+      btn.textContent = "▲";
       btn.title = "設定を表示";
     }
     requestRender();
