@@ -100,6 +100,13 @@ export function initEditor(state, deps) {
  *  its normal in-flow width, rather than relying on display:none's 0 height. */
 function pinSheetHeightToLayoutTab() {
   const sheet = document.querySelector(".bottom-sheet");
+  // While collapsed, the sheet itself is display:none, so ANY measurement
+  // taken now (even of panel-layout, even via the off-screen trick below)
+  // reads 0 - a display:none ancestor blanks out its whole subtree
+  // regardless of the child's own position/visibility. Skip re-pinning
+  // until it's visible again, so the last-known-good height survives.
+  if (sheet.classList.contains("collapsed")) return;
+
   const layoutPanel = $("panel-layout");
   const csSheet = getComputedStyle(sheet);
   const paddingV = parseFloat(csSheet.paddingTop) + parseFloat(csSheet.paddingBottom);
@@ -141,8 +148,13 @@ function expandSheet() {
   const btn = $("collapseSheetBtn");
   if (sheet.classList.contains("collapsed")) {
     sheet.classList.remove("collapsed");
+    document.querySelector(".bottom-tabs").classList.remove("sheet-collapsed");
     btn.textContent = "▽";
     btn.title = "設定を隠す";
+    // The sheet was skipping re-measurement the whole time it was hidden
+    // (see pinSheetHeightToLayoutTab), so take one fresh measurement now
+    // that it's visible again, in case anything changed while it was collapsed.
+    pinSheetHeightToLayoutTab();
   }
 }
 
@@ -154,10 +166,16 @@ function expandSheet() {
 function wireCollapseToggle(requestRender) {
   const btn = $("collapseSheetBtn");
   const sheet = document.querySelector(".bottom-sheet");
+  const tabs = document.querySelector(".bottom-tabs");
   btn.addEventListener("click", () => {
-    const collapsed = sheet.classList.toggle("collapsed");
-    btn.textContent = collapsed ? "△" : "▽";
-    btn.title = collapsed ? "設定を表示" : "設定を隠す";
+    if (sheet.classList.contains("collapsed")) {
+      expandSheet();
+    } else {
+      sheet.classList.add("collapsed");
+      tabs.classList.add("sheet-collapsed");
+      btn.textContent = "△";
+      btn.title = "設定を表示";
+    }
     requestRender();
   });
 }

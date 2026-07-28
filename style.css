@@ -277,13 +277,19 @@ button { font-family: inherit; }
 
 .chevron-btn {
   flex: 0 0 auto;
-  width: 40px;
+  width: 52px;
   background: var(--panel);
   color: var(--text-dim);
   border: none;
   border-left: 1px solid var(--border);
-  font-size: 13px;
+  font-size: 20px;
   cursor: pointer;
+}
+
+/* Extra breathing room under the tab row once the sheet is collapsed, so
+   the tabs aren't flush against the very bottom edge of the screen. */
+.bottom-tabs.sheet-collapsed {
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
 }
 
 .bottom-sheet {
@@ -415,8 +421,8 @@ button { font-family: inherit; }
 .variant-btn.active .mini-grid-cell { background: var(--accent); }
 
 .toggle-btn {
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--text);
