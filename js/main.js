@@ -26,6 +26,7 @@ let liftedPhotoIndex = null;
 let editingTextId = null;
 let photoManipulating = false; // true while pinch/drag/reorder is actively changing the selected photo
 let textActionBarId = null; // id of the text currently showing the long-press 複製/削除 bar
+let photoActionBarIndex = null; // index of the photo currently showing the long-press 90°/削除 bar
 
 /** Force every modal/overlay closed. Mobile Safari can restore a page from its
  *  back-forward cache with whatever DOM state it had when you navigated away
@@ -61,7 +62,13 @@ function requestRender() {
  *  and hides it whenever a photo isn't selected. */
 function updatePhotoActionBar() {
   const sel = state.data.selection;
-  if (photoManipulating || !sel || sel.type !== "photo" || !state.data.photos[sel.index]) {
+  if (
+    photoManipulating ||
+    !sel ||
+    sel.type !== "photo" ||
+    sel.index !== photoActionBarIndex ||
+    !state.data.photos[sel.index]
+  ) {
     photoActionBar.hidden = true;
     return;
   }
@@ -221,10 +228,13 @@ function bootEditor() {
       // Selecting a text object shows its properties inside the テキスト tab,
       // so jump there automatically (mirrors the old 選択中 tab's role).
       if (sel && sel.type === "text") switchToTab("panel-text");
-      // The long-press 複製/削除 bar only belongs to the text it was raised
-      // for; any other selection change (or none) dismisses it.
+      // The long-press action bars only belong to the object they were
+      // raised for; any other selection change (or none) dismisses them.
       if (!(sel && sel.type === "text" && sel.id === textActionBarId)) {
         textActionBarId = null;
+      }
+      if (!(sel && sel.type === "photo" && sel.index === photoActionBarIndex)) {
+        photoActionBarIndex = null;
       }
     },
     onTextDoubleTap: (t) => openInlineTextEditor(t),
@@ -232,6 +242,7 @@ function bootEditor() {
     onLiftChange: (index) => { liftedPhotoIndex = index; requestRender(); },
     onPhotoManipulating: (active) => { photoManipulating = active; requestRender(); },
     onTextLongPress: (textId) => { textActionBarId = textId; requestRender(); },
+    onPhotoLongPress: (index) => { photoActionBarIndex = index; requestRender(); },
   });
 
   initEditor(state, {
@@ -257,6 +268,7 @@ function bootEditor() {
     state.beginChange();
     state.data.photos[sel.index] = null;
     state.data.selection = null;
+    photoActionBarIndex = null;
     state.notify();
     requestRender();
   });

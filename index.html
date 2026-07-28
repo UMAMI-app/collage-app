@@ -142,18 +142,18 @@
         <button id="addTextBtnV" class="secondary-btn">＋縦書きテキスト追加</button>
       </div>
 
-      <div id="textProps" class="props" hidden>
+      <div id="textProps" class="props">
         <div class="field-row">
           <label>フォント</label>
-          <select id="textFont">
-            <option value="'Noto Sans JP', 'Hiragino Sans', sans-serif">ゴシック</option>
-            <option value="'Noto Serif JP', 'Hiragino Mincho ProN', serif">明朝</option>
-            <option value="Georgia, serif">Georgia</option>
-          </select>
+          <div class="font-btn-row">
+            <button class="toggle-btn font-btn" data-font="'Noto Sans JP', 'Hiragino Sans', sans-serif">ゴシック</button>
+            <button class="toggle-btn font-btn" data-font="'Noto Serif JP', 'Hiragino Mincho ProN', serif">明朝</button>
+            <button class="toggle-btn font-btn" data-font="Georgia, serif">Georgia</button>
+          </div>
         </div>
         <div class="field-row">
-          <label>サイズ <span id="textSizeVal">48</span></label>
-          <input type="range" id="textSizeSlider" min="8" max="200" value="48">
+          <label>サイズ <span id="textSizeVal">150</span></label>
+          <input type="range" id="textSizeSlider" min="80" max="300" value="150">
         </div>
         <div class="field-row">
           <label>色</label>
@@ -164,7 +164,7 @@
           <input type="range" id="textWeightSlider" min="100" max="900" step="100" value="400">
         </div>
         <div class="field-row toggles">
-          <button id="italicBtn" class="toggle-btn" data-key="italic">I</button>
+          <button id="italicBtn" class="toggle-btn italic-label" data-key="italic">斜</button>
           <button id="alignLeft" class="toggle-btn" data-align="left">左</button>
           <button id="alignCenter" class="toggle-btn" data-align="center">中</button>
           <button id="alignRight" class="toggle-btn" data-align="right">右</button>
@@ -179,7 +179,7 @@
         </div>
         <div class="field-row">
           <label>文字間隔 <span id="textLetterSpacingVal">0</span>px</label>
-          <input type="range" id="textLetterSpacingSlider" min="-5" max="30" value="0">
+          <input type="range" id="textLetterSpacingSlider" min="-5" max="100" value="0">
         </div>
         <div class="field-row">
           <label>ドロップシャドウ<input type="checkbox" id="shadowToggle"></label>

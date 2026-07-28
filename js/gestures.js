@@ -1,9 +1,11 @@
 // gestures.js
 // Pointer-event based gesture engine for the canvas:
-//  photo:  tap = select, long-press+drag = reorder(swap slots),
-//          1-finger drag = pan image inside its cell,
-//          2-finger pinch = scale, 2-finger twist = rotate.
-//  text:   tap = select, double-tap = edit in place, 1-finger drag = move,
+//  photo:  tap = select, long-press = show 90°/delete bar (long-press+drag
+//          from there = reorder/swap slots), 1-finger drag (no long-press)
+//          = pan image inside its cell, 2-finger pinch = scale, 2-finger
+//          twist = rotate.
+//  text:   tap = select, double-tap = edit in place, long-press = show
+//          duplicate/delete bar, 1-finger drag = move,
 //          2-finger pinch = scale font size.
 //  empty cell: tap = request a photo for that slot.
 
@@ -31,6 +33,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
     onLiftChange = () => {}, // (index|null) => void - photo "picked up" for reorder
     onPhotoManipulating = () => {}, // (active:boolean) => void - true while a pinch/drag/reorder is actively changing a photo
     onTextLongPress = () => {}, // (textId) => void - long-press: show duplicate/delete bar
+    onPhotoLongPress = () => {}, // (index) => void - long-press: show 90°/delete bar
   } = callbacks;
 
   const pointers = new Map(); // pointerId -> {x,y}
@@ -103,14 +106,14 @@ export function attachGestures(canvas, ctx, state, callbacks) {
         changeBegun: false,
         t0: performance.now(),
         longPressFired: false,
+        lifted: false, // becomes true only once actual dragging starts after the long-press fires
         longPressTimer: setTimeout(() => {
           if (gesture && gesture.kind === "photo" && !gesture.moved) {
             gesture.longPressFired = true;
             gesture.hoverIndex = hit.index;
             state.data.selection = { type: "photo", index: hit.index };
             onSelectionChange(state.data.selection);
-            onLiftChange(hit.index);
-            setManipulating(true);
+            onPhotoLongPress(hit.index); // show the 90°/delete bar
             onRequestRender();
           }
         }, LONG_PRESS_MS),
@@ -212,6 +215,16 @@ export function attachGestures(canvas, ctx, state, callbacks) {
         clearTimeout(gesture.longPressTimer);
       }
       if (gesture.longPressFired) {
+        // The 90°/delete bar is up. Only start the reorder-lift once the
+        // finger actually moves - a long-press-then-release-in-place should
+        // just leave the bar showing, not swap anything.
+        if (!gesture.lifted) {
+          if (movedDist <= MOVE_CANCEL_PX) return;
+          gesture.lifted = true;
+          gesture.hoverIndex = gesture.index;
+          onLiftChange(gesture.index);
+          setManipulating(true);
+        }
         // reorder mode: track hover cell
         const hit = hitTest(pt.x, pt.y);
         gesture.hoverIndex = hit && (hit.type === "photo" || hit.type === "empty") ? hit.index : gesture.hoverIndex;
@@ -290,14 +303,17 @@ export function attachGestures(canvas, ctx, state, callbacks) {
     if (g.kind === "photo") {
       clearTimeout(g.longPressTimer);
       if (g.longPressFired) {
-        onLiftChange(null);
-        setManipulating(false);
-        if (g.hoverIndex != null && g.hoverIndex !== g.index) {
-          state.beginChange();
-          const arr = state.data.photos;
-          [arr[g.index], arr[g.hoverIndex]] = [arr[g.hoverIndex], arr[g.index]];
-          state.notify();
+        if (g.lifted) {
+          onLiftChange(null);
+          setManipulating(false);
+          if (g.hoverIndex != null && g.hoverIndex !== g.index) {
+            state.beginChange();
+            const arr = state.data.photos;
+            [arr[g.index], arr[g.hoverIndex]] = [arr[g.hoverIndex], arr[g.index]];
+            state.notify();
+          }
         }
+        // else: long-pressed without dragging - selection + bar stay as-is
         onRequestRender();
         return;
       }
@@ -343,11 +359,11 @@ export function attachGestures(canvas, ctx, state, callbacks) {
 
   function onPointerCancel(evt) {
     pointers.delete(evt.pointerId);
-    if (gesture && gesture.kind === "photo" && gesture.longPressFired) {
+    if (gesture && gesture.kind === "photo") {
       clearTimeout(gesture.longPressTimer);
-      onLiftChange(null);
+      if (gesture.lifted) onLiftChange(null);
+      setManipulating(false);
     }
-    if (gesture && gesture.kind === "photo") setManipulating(false);
     if (gesture && gesture.kind === "text") clearTimeout(gesture.longPressTimer);
     gesture = null;
   }

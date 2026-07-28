@@ -300,14 +300,15 @@ function wireTextPanel(state, requestRender, getCanvasSize, openInlineTextEditor
 /* ---- Text properties (shown inside the テキスト tab when a text is selected) ---- */
 
 function wireTextProps(state, requestRender) {
-  const textFont = $("textFont");
-  textFont.addEventListener("change", () => {
-    const t = currentText(state);
-    if (!t) return;
-    state.beginChange();
-    t.font = textFont.value;
-    state.notify();
-    requestRender();
+  document.querySelectorAll(".font-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const t = currentText(state);
+      if (!t) return;
+      state.beginChange();
+      t.font = btn.dataset.font;
+      state.notify();
+      requestRender();
+    });
   });
 
   const textSizeSlider = $("textSizeSlider");
@@ -441,6 +442,12 @@ function toggleTextFlag(state, requestRender, key, btn) {
   state.notify(); requestRender();
 }
 
+function syncFontButtons(font) {
+  document.querySelectorAll(".font-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.font === font);
+  });
+}
+
 function currentText(state) {
   const s = state.data.selection;
   if (!s || s.type !== "text") return null;
@@ -559,15 +566,14 @@ export function syncAllFromState(state) {
   $("radiusSlider").value = d.cornerRadius; $("radiusVal").textContent = d.cornerRadius;
   renderLayoutVariantPicker(state, () => {});
 
+  // The add-buttons row and the settings below it are both always visible
+  // in the テキスト tab now; the settings just reflect whichever text is
+  // currently selected (or stay at their last values if none is).
   const sel = d.selection;
-  const textSelected = !!(sel && sel.type === "text");
-  $("textAddRow").hidden = textSelected;
-  $("textProps").hidden = !textSelected;
-
   if (sel && sel.type === "text") {
     const t = d.texts.find((x) => x.id === sel.id);
     if (t) {
-      $("textFont").value = t.font;
+      syncFontButtons(t.font);
       $("textSizeSlider").value = t.size; $("textSizeVal").textContent = t.size;
       $("textColorPicker").value = t.color;
       $("textWeightSlider").value = t.weight || 400; $("textWeightVal").textContent = t.weight || 400;

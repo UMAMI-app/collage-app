@@ -277,7 +277,7 @@ button { font-family: inherit; }
 
 .bottom-sheet {
   flex: 0 0 auto;
-  max-height: 42vh;
+  height: 42vh; /* fixed (not max-height) so every tab renders at the same height */
   overflow-y: auto;
   background: var(--panel-2);
   padding: 14px;
@@ -296,7 +296,7 @@ button { font-family: inherit; }
 .text-add-row {
   display: flex;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 14px;
 }
 .text-add-row .secondary-btn { width: auto; flex: 1; }
 .photo-thumb {
@@ -411,6 +411,8 @@ button { font-family: inherit; }
   font-size: 13px;
 }
 .toggle-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.toggle-btn.italic-label { font-style: italic; }
+.font-btn-row { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
 
 .hint { color: var(--text-dim); font-size: 13px; padding: 20px 0; text-align: center; }
 .props { }
@@ -452,5 +454,5 @@ button { font-family: inherit; }
 .template-row button.danger { color: var(--danger); }
 
 @media (min-width: 900px) {
-  .bottom-sheet { max-height: 34vh; }
+  .bottom-sheet { height: 34vh; }
 }
