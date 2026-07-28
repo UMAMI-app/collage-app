@@ -260,6 +260,12 @@ button { font-family: inherit; }
 .bottom-tabs {
   display: flex;
   flex: 0 0 auto;
+  /* background lives on the row itself (not just its buttons) so the
+     padding below - which isn't covered by any button - doesn't show the
+     page background through as a mismatched white gap. */
+  background: var(--panel-2);
+  padding-top: 8px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
 }
 .tab-btn {
   flex: 1;
@@ -283,14 +289,18 @@ button { font-family: inherit; }
   cursor: pointer;
 }
 
-/* Extra breathing room under the tab row once the sheet is collapsed, so
-   the tabs aren't flush against the very bottom edge of the screen. */
+/* A bit more breathing room under the tab row once the sheet is collapsed,
+   since the tabs then sit at the very bottom edge of the screen. */
 .bottom-tabs.sheet-collapsed {
-  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
 
 .bottom-sheet {
   flex: 0 0 auto;
+  /* position:relative contains pinSheetHeightToLayoutTab's brief off-screen
+     measurement (position:absolute) to this box, instead of it falling back
+     to the viewport and causing a visible layout jump elsewhere on the page. */
+  position: relative;
   /* height is set inline by JS, pinned to panel-layout's natural content
      height (the shorter tab) so there's no wasted space on that tab; the
      taller テキスト tab's extra content just scrolls within the same height. */

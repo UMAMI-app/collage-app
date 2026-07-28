@@ -2,19 +2,54 @@
 // Renders the composition at a high, fixed export resolution and downloads
 // it as a single JPEG (per spec: JPEG only, quality fixed high).
 
-import { exportPixelSize } from "./layout.js";
+import { exportPixelSize, canvasPixelSize } from "./layout.js";
 import { renderCanvas } from "./render.js";
 
 const EXPORT_LONG_SIDE = 2048;
 const JPEG_QUALITY = 0.95;
 
+// state.data is authored entirely in the editor's working resolution
+// (canvasPixelSize, long side 1400px). A handful of its fields are absolute
+// pixel values measured in that space - spacing/cornerRadius (layout),
+// photo offsetX/offsetY (pan position), and text x/y/size/letterSpacing +
+// shadow distance/blur. Exporting re-renders at a different, higher
+// resolution (EXPORT_LONG_SIDE, 2048px), so those absolute values must be
+// scaled up by the same ratio or every position/size drifts from what the
+// editor preview showed. Everything else (scale, rotation, weight, opacity,
+// lineHeight, angle - all unitless/relative) is copied through unchanged.
+function buildExportData(data, scale) {
+  return {
+    ...data,
+    spacing: data.spacing * scale,
+    cornerRadius: data.cornerRadius * scale,
+    photos: data.photos.map((p) =>
+      p
+        ? { ...p, offsetX: (p.offsetX || 0) * scale, offsetY: (p.offsetY || 0) * scale }
+        : p
+    ),
+    texts: data.texts.map((t) => ({
+      ...t,
+      x: t.x * scale,
+      y: t.y * scale,
+      size: t.size * scale,
+      letterSpacing: t.letterSpacing * scale,
+      shadow: t.shadow
+        ? { ...t.shadow, distance: t.shadow.distance * scale, blur: t.shadow.blur * scale }
+        : t.shadow,
+    })),
+  };
+}
+
 export async function exportJPEG(state) {
   const { w, h } = exportPixelSize(state.data.ratioId, EXPORT_LONG_SIDE);
+  const { w: editW } = canvasPixelSize(state.data.ratioId);
+  const scale = w / editW;
+  const exportData = buildExportData(state.data, scale);
   const off = document.createElement("canvas");
   off.width = w;
   off.height = h;
   const ctx = off.getContext("2d");
-  renderCanvas(ctx, state.data, w, h, { forExport: true });
+  renderCanvas(ctx, exportData, w, h, { forExport: true });
 
   const blob = await new Promise((resolve) => off.toBlob(resolve, "image/jpeg", JPEG_QUALITY));
   const ts = new Date();

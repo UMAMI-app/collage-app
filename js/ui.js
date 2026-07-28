@@ -122,7 +122,26 @@ function pinSheetHeightToLayoutTab() {
     layoutPanel.style.cssText = prevCssText;
   }
 
-  sheet.style.height = `${measuredHeight + paddingV}px`;
+  // Only actually touch the DOM if the value changed - writing the same
+  // height on every single state change (e.g. every photo tap/drag, which
+  // has nothing to do with panel-layout's size) was forcing a needless
+  // reflow each time, which is what caused the visible "jerk".
+  const newHeight = `${measuredHeight + paddingV}px`;
+  if (sheet.style.height !== newHeight) {
+    sheet.style.height = newHeight;
+  }
+}
+
+let lastPinnedPhotoCount = null;
+/** Only panel-layout's own content can change its natural height (mainly
+ *  the 並び row appearing/disappearing based on photoCount), so re-pinning
+ *  on every unrelated state change (photo drags, text edits, ...) was pure
+ *  waste - and risked the jerk above. Call this from syncAllFromState
+ *  instead of pinning unconditionally. */
+function pinSheetHeightIfPhotoCountChanged(photoCount) {
+  if (photoCount === lastPinnedPhotoCount) return;
+  lastPinnedPhotoCount = photoCount;
+  pinSheetHeightToLayoutTab();
 }
 
 function wireTabs() {
@@ -636,8 +655,9 @@ export function syncAllFromState(state) {
   $("radiusSlider").value = d.cornerRadius; $("radiusVal").textContent = d.cornerRadius;
   renderLayoutVariantPicker(state, () => {});
   // 並び row's visibility depends on photoCount, which can change panel-layout's
-  // natural height (e.g. via undo/redo or applying a template) - re-pin.
-  pinSheetHeightToLayoutTab();
+  // natural height (e.g. via undo/redo or applying a template) - re-pin only
+  // when photoCount actually changed, not on every unrelated state change.
+  pinSheetHeightIfPhotoCountChanged(d.photoCount);
 
   // The add-buttons row and the settings below it are both always visible
   // in the テキスト tab now; the settings just reflect whichever text is
