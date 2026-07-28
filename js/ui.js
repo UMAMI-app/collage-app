@@ -185,12 +185,16 @@ const STANDARD_LAYOUT_PREVIEW = {
   10: { rows: 5, cols: 2 },
 };
 
+// Simplified icon: always just 2 squares, oriented to hint at the actual
+// rows/cols shape (side-by-side for wide layouts, stacked for tall ones),
+// rather than replicating the full grid - keeps the picker compact.
 function buildMiniGridIcon(rows, cols) {
   const el = document.createElement("div");
   el.className = "mini-grid-icon";
-  el.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
-  el.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-  for (let i = 0; i < rows * cols; i++) {
+  const horizontal = cols >= rows;
+  el.style.gridTemplateRows = horizontal ? "1fr" : "1fr 1fr";
+  el.style.gridTemplateColumns = horizontal ? "1fr 1fr" : "1fr";
+  for (let i = 0; i < 2; i++) {
     const cell = document.createElement("div");
     cell.className = "mini-grid-cell";
     el.appendChild(cell);

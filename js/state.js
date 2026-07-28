@@ -29,7 +29,7 @@ export function defaultTextObj(canvasW, canvasH, orientation = "horizontal") {
   return {
     id: uid("text"),
     content: orientation === "vertical" ? "縦書き" : "テキスト",
-    font: "'Hiragino Sans', 'Noto Sans JP', sans-serif",
+    font: "'Noto Sans JP', 'Hiragino Sans', sans-serif",
     size: 48,
     color: "#ffffff",
     weight: 400,

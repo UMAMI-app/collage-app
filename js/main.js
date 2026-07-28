@@ -3,7 +3,7 @@
 // silently resuming from autosave if one exists. Wires state + render +
 // gestures + ui.
 
-import { AppState, createDefaultState, imageRegistry } from "./state.js";
+import { AppState, createDefaultState, imageRegistry, uid } from "./state.js";
 import { canvasPixelSize } from "./layout.js";
 import { renderCanvas, textLocalBounds, getCellRects } from "./render.js";
 import { attachGestures } from "./gestures.js";
@@ -11,6 +11,7 @@ import { initEditor, requestPhotoForSlot, switchToTab } from "./ui.js";
 
 const inlineTextEditArea = document.getElementById("inlineTextEditArea");
 const photoActionBar = document.getElementById("photoActionBar");
+const textActionBar = document.getElementById("textActionBar");
 
 const DEFAULT_PHOTO_COUNT = 4;
 const DEFAULT_RATIO_ID = "1:1";
@@ -24,6 +25,7 @@ let state = null;
 let liftedPhotoIndex = null;
 let editingTextId = null;
 let photoManipulating = false; // true while pinch/drag/reorder is actively changing the selected photo
+let textActionBarId = null; // id of the text currently showing the long-press 複製/削除 bar
 
 /** Force every modal/overlay closed. Mobile Safari can restore a page from its
  *  back-forward cache with whatever DOM state it had when you navigated away
@@ -51,6 +53,7 @@ function requestRender() {
   const { w, h } = syncCanvasPixelSize();
   renderCanvas(ctx, state.data, w, h, { forExport: false, liftedIndex: liftedPhotoIndex, editingTextId });
   updatePhotoActionBar();
+  updateTextActionBar();
 }
 
 /** Positions the floating delete/rotate action bar over the currently
@@ -83,6 +86,37 @@ function updatePhotoActionBar() {
   photoActionBar.style.top = `${Math.max(4, topY + 8)}px`;
   photoActionBar.style.transform = "translateX(-50%)";
   photoActionBar.hidden = false;
+}
+
+/** Positions the floating 複製/削除 bar above a long-pressed text object;
+ *  hidden whenever no text has been long-pressed (or it was since removed). */
+function updateTextActionBar() {
+  if (!textActionBarId) {
+    textActionBar.hidden = true;
+    return;
+  }
+  const t = state.data.texts.find((x) => x.id === textActionBarId);
+  if (!t) {
+    textActionBarId = null;
+    textActionBar.hidden = true;
+    return;
+  }
+
+  const { h } = textLocalBounds(ctx, t);
+  const rect = canvas.getBoundingClientRect();
+  const wrapRect = canvas.parentElement.getBoundingClientRect();
+  const scaleX = rect.width / canvas.width;
+  const scaleY = rect.height / canvas.height;
+  const canvasOffsetLeft = rect.left - wrapRect.left;
+  const canvasOffsetTop = rect.top - wrapRect.top;
+
+  const cx = canvasOffsetLeft + t.x * scaleX;
+  const topY = canvasOffsetTop + (t.y - h / 2) * scaleY;
+
+  textActionBar.style.left = `${cx}px`;
+  textActionBar.style.top = `${Math.max(4, topY - 48)}px`;
+  textActionBar.style.transform = "translateX(-50%)";
+  textActionBar.hidden = false;
 }
 
 /** Double-tap-to-edit: positions a borderless textarea directly over the
@@ -139,10 +173,12 @@ function openInlineTextEditor(textObj) {
     requestRender();
   };
 
-  requestAnimationFrame(() => {
-    area.focus();
-    area.select();
-  });
+  // iOS Safari only pops the keyboard for a focus() call made synchronously
+  // within the user-gesture call stack (the tap/click handler); deferring it
+  // to requestAnimationFrame breaks that chain and the keyboard silently
+  // fails to appear. So focus/select happen immediately, not next frame.
+  area.focus();
+  area.select();
 }
 
 async function hydrateImagesForState(data) {
@@ -185,11 +221,17 @@ function bootEditor() {
       // Selecting a text object shows its properties inside the テキスト tab,
       // so jump there automatically (mirrors the old 選択中 tab's role).
       if (sel && sel.type === "text") switchToTab("panel-text");
+      // The long-press 複製/削除 bar only belongs to the text it was raised
+      // for; any other selection change (or none) dismisses it.
+      if (!(sel && sel.type === "text" && sel.id === textActionBarId)) {
+        textActionBarId = null;
+      }
     },
     onTextDoubleTap: (t) => openInlineTextEditor(t),
     onEmptyCellTap: (index) => requestPhotoForSlot(index),
     onLiftChange: (index) => { liftedPhotoIndex = index; requestRender(); },
     onPhotoManipulating: (active) => { photoManipulating = active; requestRender(); },
+    onTextLongPress: (textId) => { textActionBarId = textId; requestRender(); },
   });
 
   initEditor(state, {
@@ -219,7 +261,40 @@ function bootEditor() {
     requestRender();
   });
 
+  document.getElementById("textDuplicateBtn").addEventListener("click", () => {
+    const t = state.data.texts.find((x) => x.id === textActionBarId);
+    if (!t) return;
+    state.beginChange();
+    const copy = { ...t, id: uid("text"), shadow: { ...t.shadow }, x: t.x + 24, y: t.y + 24 };
+    state.data.texts.push(copy);
+    state.data.selection = { type: "text", id: copy.id };
+    textActionBarId = null;
+    state.notify();
+    switchToTab("panel-text");
+    requestRender();
+  });
+
+  document.getElementById("textActionDeleteBtn").addEventListener("click", () => {
+    const id = textActionBarId;
+    if (!id) return;
+    state.beginChange();
+    state.data.texts = state.data.texts.filter((x) => x.id !== id);
+    if (state.data.selection && state.data.selection.type === "text" && state.data.selection.id === id) {
+      state.data.selection = null;
+    }
+    textActionBarId = null;
+    state.notify();
+    requestRender();
+  });
+
   window.addEventListener("resize", requestRender);
+
+  // Canvas text can paint before a webfont (Noto Sans/Serif JP) finishes
+  // downloading, silently falling back to a system font for that first
+  // frame - re-render once fonts are actually ready so weights render correctly.
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => requestRender());
+  }
 }
 
 if (AppState.loadAutosave()) {

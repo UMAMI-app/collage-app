@@ -30,6 +30,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
     onEmptyCellTap, // (index) => void
     onLiftChange = () => {}, // (index|null) => void - photo "picked up" for reorder
     onPhotoManipulating = () => {}, // (active:boolean) => void - true while a pinch/drag/reorder is actively changing a photo
+    onTextLongPress = () => {}, // (textId) => void - long-press: show duplicate/delete bar
   } = callbacks;
 
   const pointers = new Map(); // pointerId -> {x,y}
@@ -126,6 +127,16 @@ export function attachGestures(canvas, ctx, state, callbacks) {
         changeBegun: false,
         t0: performance.now(),
         base: null, // filled from live object
+        longPressFired: false,
+        longPressTimer: setTimeout(() => {
+          if (gesture && gesture.kind === "text" && gesture.id === hit.id && !gesture.moved) {
+            gesture.longPressFired = true;
+            state.data.selection = { type: "text", id: hit.id };
+            onSelectionChange(state.data.selection);
+            onTextLongPress(hit.id);
+            onRequestRender();
+          }
+        }, LONG_PRESS_MS),
       };
       const t = state.data.texts.find((x) => x.id === hit.id);
       gesture.base = { x: t.x, y: t.y, size: t.size };
@@ -223,6 +234,10 @@ export function attachGestures(canvas, ctx, state, callbacks) {
 
     if (gesture.kind === "text") {
       const movedDist = dist(pt.x - gesture.startPt.x, pt.y - gesture.startPt.y);
+      if (movedDist > MOVE_CANCEL_PX && !gesture.longPressFired) {
+        clearTimeout(gesture.longPressTimer);
+      }
+      if (gesture.longPressFired) return; // frozen in place while the duplicate/delete bar is up
       if (movedDist > TAP_MAX_MOVE_PX) {
         gesture.moved = true;
         ensureChangeBegun(gesture);
@@ -298,6 +313,8 @@ export function attachGestures(canvas, ctx, state, callbacks) {
     }
 
     if (g.kind === "text") {
+      clearTimeout(g.longPressTimer);
+      if (g.longPressFired) return; // bar already shown from the timer callback
       if (!g.moved) {
         state.data.selection = { type: "text", id: g.id };
         onSelectionChange(state.data.selection);
@@ -331,6 +348,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
       onLiftChange(null);
     }
     if (gesture && gesture.kind === "photo") setManipulating(false);
+    if (gesture && gesture.kind === "text") clearTimeout(gesture.longPressTimer);
     gesture = null;
   }
 

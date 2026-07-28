@@ -160,6 +160,7 @@ button { font-family: inherit; }
   flex: 0 0 auto;
 }
 .round-icon-btn svg { width: 20px; height: 20px; }
+.round-icon-btn .rotate-label { font-size: 12px; font-weight: 700; line-height: 1; }
 .round-icon-btn:disabled { opacity: 0.35; }
 
 .text-icon-btn {
@@ -379,26 +380,25 @@ button { font-family: inherit; }
 .swatch.white { background: #fff; }
 .swatch.black { background: #000; margin-right: 6px; }
 
-.variant-row { display: flex; gap: 8px; }
+.variant-row { display: flex; gap: 6px; }
 .variant-btn {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 5px 8px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--panel);
+  justify-content: center;
+  padding: 4px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
   cursor: pointer;
 }
-.variant-btn.active { border-color: var(--accent); background: var(--panel-2); }
+.variant-btn.active { background: var(--panel-2); }
 .mini-grid-icon {
   display: grid;
   gap: 2px;
-  width: 35px;
-  height: 27px;
+  width: 26px;
+  height: 20px;
 }
-.mini-grid-cell { background: var(--text-dim); border-radius: 2px; }
+.mini-grid-cell { background: var(--text-dim); border-radius: 1px; }
 .variant-btn.active .mini-grid-cell { background: var(--accent); }
 
 .toggle-btn {
