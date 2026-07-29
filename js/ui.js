@@ -547,7 +547,7 @@ function wireTopbar(state, requestRender) {
   $("redoBtn").addEventListener("click", () => { state.redo(); requestRender(); });
   $("clearAllPhotosBtn").addEventListener("click", () => {
     if (state.data.photos.every((p) => !p)) return; // already empty, nothing to do
-    if (!confirm("全ての画像を削除します。よろしいですか?")) return;
+    if (!confirm("全ての画像を削除します。")) return;
     state.beginChange();
     state.data.photos = state.data.photos.map(() => null);
     if (state.data.selection && state.data.selection.type === "photo") {
@@ -558,13 +558,16 @@ function wireTopbar(state, requestRender) {
   });
   $("exportBtn").addEventListener("click", async () => {
     const btn = $("exportBtn");
-    const original = btn.textContent;
-    btn.textContent = "書き出し中…";
+    // Icon-only button now (no text label to swap), so "書き出し中…" shows
+    // via the title tooltip instead; the dimmed :disabled look is the main
+    // in-progress cue.
+    const originalTitle = btn.title;
+    btn.title = "書き出し中…";
     btn.disabled = true;
     try {
       await exportJPEG(state);
     } finally {
-      btn.textContent = original;
+      btn.title = originalTitle;
       btn.disabled = false;
     }
   });
