@@ -105,7 +105,7 @@ function pinSheetHeightToActivePanel() {
 
   const csSheet = getComputedStyle(sheet);
   const paddingV = parseFloat(csSheet.paddingTop) + parseFloat(csSheet.paddingBottom);
-  const targetContentHeight = window.innerHeight * 0.32;
+  const targetContentHeight = window.innerHeight * 0.25;
 
   // Only actually touch the DOM if the value changed - writing the same
   // height on every single state change (e.g. every photo tap/drag, which

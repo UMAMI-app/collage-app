@@ -179,15 +179,12 @@
           <div class="font-btn-row">
             <button class="toggle-btn font-btn" data-font="'Noto Sans JP', 'Hiragino Sans', sans-serif">ゴシック</button>
             <button class="toggle-btn font-btn" data-font="'Noto Serif JP', 'Hiragino Mincho ProN', serif">明朝</button>
+            <input type="color" id="textColorPicker" value="#ffffff">
           </div>
         </div>
         <div class="field-row">
           <label>サイズ <span id="textSizeVal">150</span></label>
           <input type="range" id="textSizeSlider" min="80" max="300" value="150">
-        </div>
-        <div class="field-row">
-          <label>色</label>
-          <input type="color" id="textColorPicker" value="#ffffff">
         </div>
         <div class="field-row">
           <label>太さ <span id="textWeightVal">400</span></label>
@@ -200,16 +197,16 @@
           <button id="alignRight" class="toggle-btn" data-align="right">右</button>
         </div>
         <div class="field-row">
-          <label>不透明度 <span id="textOpacityVal">100</span>%</label>
-          <input type="range" id="textOpacitySlider" min="0" max="100" value="100">
+          <label>文字間隔 <span id="textLetterSpacingVal">0</span>px</label>
+          <input type="range" id="textLetterSpacingSlider" min="-5" max="100" value="0">
         </div>
         <div class="field-row">
           <label>行間 <span id="textLineHeightVal">1.2</span></label>
           <input type="range" id="textLineHeightSlider" min="0.8" max="2.5" step="0.05" value="1.2">
         </div>
         <div class="field-row">
-          <label>文字間隔 <span id="textLetterSpacingVal">0</span>px</label>
-          <input type="range" id="textLetterSpacingSlider" min="-5" max="100" value="0">
+          <label>不透明度 <span id="textOpacityVal">100</span>%</label>
+          <input type="range" id="textOpacitySlider" min="0" max="100" value="100">
         </div>
       </div>
     </div>
