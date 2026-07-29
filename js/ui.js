@@ -4,7 +4,7 @@
 // image registry / templates modules; does not own canvas drawing itself
 // (that's render.js, driven from main.js).
 
-import { ASPECT_RATIOS, ALT_LAYOUTS } from "./layout.js";
+import { ASPECT_RATIOS, ALT_LAYOUTS, canvasPixelSize } from "./layout.js";
 import { imageRegistry, defaultTextObj, resizePhotoSlots } from "./state.js";
 import { listTemplates, saveTemplate, deleteTemplate, applyTemplateToState } from "./templates.js";
 import { exportJPEG } from "./export.js";
@@ -122,6 +122,14 @@ function pinSheetHeightToLayoutTab() {
     layoutPanel.style.cssText = prevCssText;
   }
 
+  // Cap how tall the sheet is allowed to grow: panel-layout's full natural
+  // height (with the wider row spacing the user asked for) can now exceed
+  // what comfortably fits on screen alongside the photo. Past this cap the
+  // sheet just scrolls internally (overflow-y: auto, already set) instead
+  // of shrinking the canvas to make room for every row at once.
+  const maxContentHeight = window.innerHeight * 0.42;
+  measuredHeight = Math.min(measuredHeight, maxContentHeight);
+
   // Only actually touch the DOM if the value changed - writing the same
   // height on every single state change (e.g. every photo tap/drag, which
   // has nothing to do with panel-layout's size) was forcing a needless
@@ -226,7 +234,24 @@ function wireLayoutPanel(state, requestRender) {
     chip.addEventListener("click", () => {
       if (state.data.ratioId === r.id) return;
       state.beginChange();
+      // Text/photo x,y,offsetX,offsetY are absolute pixel positions in the
+      // *current* ratio's canvas box. Switching ratio changes canvas width
+      // and height independently (portrait <-> landscape isn't a uniform
+      // scale), so without rescaling here, a text placed near the bottom of
+      // a tall canvas could land far below the new, much shorter canvas -
+      // effectively invisible. Scale each axis by its own before/after
+      // ratio so relative position (e.g. "90% of the way down") is preserved
+      // and stays on-canvas no matter which ratio comes next.
+      const { w: oldW, h: oldH } = canvasPixelSize(state.data.ratioId);
       state.data.ratioId = r.id;
+      const { w: newW, h: newH } = canvasPixelSize(r.id);
+      const sx = newW / oldW, sy = newH / oldH;
+      state.data.texts.forEach((t) => { t.x *= sx; t.y *= sy; });
+      state.data.photos.forEach((p) => {
+        if (!p) return;
+        p.offsetX = (p.offsetX || 0) * sx;
+        p.offsetY = (p.offsetY || 0) * sy;
+      });
       state.notify();
       requestRender();
     });
@@ -304,26 +329,36 @@ function renderLayoutVariantPicker(state, requestRender) {
   const count = state.data.photoCount;
   const alt = ALT_LAYOUTS[count];
 
-  if (!alt) {
+  // count === 1 has no grid at all (a single full-bleed photo), so there's
+  // truly nothing to arrange - that's the one case still fully hidden.
+  // Every other count now always shows the row; counts with no real
+  // alternate layout just render it greyed out and non-interactive instead.
+  if (count === 1) {
     row.hidden = true;
     return;
   }
   row.hidden = false;
 
-  const std = STANDARD_LAYOUT_PREVIEW[count];
+  const std = STANDARD_LAYOUT_PREVIEW[count] || { rows: Math.ceil(count / 2), cols: 2 };
+  const altShape = alt || std;
   picker.innerHTML = "";
 
-  [{ variant: 0, ...std }, { variant: 1, ...alt }].forEach(({ variant, rows, cols }) => {
+  [{ variant: 0, ...std }, { variant: 1, ...altShape }].forEach(({ variant, rows, cols }) => {
     const btn = document.createElement("button");
-    btn.className = "variant-btn" + ((state.data.layoutVariant || 0) === variant ? " active" : "");
+    const isActive = !!alt && (state.data.layoutVariant || 0) === variant;
+    btn.className = "variant-btn" + (isActive ? " active" : "") + (!alt ? " unavailable" : "");
     btn.appendChild(buildMiniGridIcon(rows, cols));
-    btn.addEventListener("click", () => {
-      if ((state.data.layoutVariant || 0) === variant) return;
-      state.beginChange();
-      state.data.layoutVariant = variant;
-      state.notify();
-      requestRender();
-    });
+    if (!alt) {
+      btn.disabled = true;
+    } else {
+      btn.addEventListener("click", () => {
+        if ((state.data.layoutVariant || 0) === variant) return;
+        state.beginChange();
+        state.data.layoutVariant = variant;
+        state.notify();
+        requestRender();
+      });
+    }
     picker.appendChild(btn);
   });
 }

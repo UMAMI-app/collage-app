@@ -379,7 +379,7 @@ button { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 18px;
   font-size: 13px;
 }
 .field-row > label {
@@ -441,6 +441,9 @@ button { font-family: inherit; }
   cursor: pointer;
 }
 .variant-btn.active { background: var(--panel-2); }
+/* Shown (not hidden) for every photo count now, even ones with no real
+   alternate arrangement, so grey out + block interaction instead. */
+.variant-btn.unavailable { opacity: 0.35; cursor: default; }
 .mini-grid-icon {
   display: grid;
   gap: 2px;
