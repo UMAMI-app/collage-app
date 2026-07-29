@@ -126,8 +126,11 @@ function pinSheetHeightToLayoutTab() {
   // height (with the wider row spacing the user asked for) can now exceed
   // what comfortably fits on screen alongside the photo. Past this cap the
   // sheet just scrolls internally (overflow-y: auto, already set) instead
-  // of shrinking the canvas to make room for every row at once.
-  const maxContentHeight = window.innerHeight * 0.42;
+  // of shrinking the canvas to make room for every row at once. Lowered
+  // from 0.42 per direct feedback (annotated screenshot) asking for a
+  // noticeably bigger photo, with the rest of 枚数/比率/... reachable by
+  // scrolling rather than all fitting on screen at once.
+  const maxContentHeight = window.innerHeight * 0.28;
   measuredHeight = Math.min(measuredHeight, maxContentHeight);
 
   // Only actually touch the DOM if the value changed - writing the same
