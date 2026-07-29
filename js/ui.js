@@ -329,14 +329,8 @@ function renderLayoutVariantPicker(state, requestRender) {
   const count = state.data.photoCount;
   const alt = ALT_LAYOUTS[count];
 
-  // count === 1 has no grid at all (a single full-bleed photo), so there's
-  // truly nothing to arrange - that's the one case still fully hidden.
-  // Every other count now always shows the row; counts with no real
-  // alternate layout just render it greyed out and non-interactive instead.
-  if (count === 1) {
-    row.hidden = true;
-    return;
-  }
+  // Always show the row now, even for counts with no real alternate layout
+  // (including count === 1) - those just render greyed out and non-interactive.
   row.hidden = false;
 
   const std = STANDARD_LAYOUT_PREVIEW[count] || { rows: Math.ceil(count / 2), cols: 2 };

@@ -84,7 +84,15 @@ export function computeLayout(count, canvasW, canvasH, spacing, variant = 0) {
   count = Math.max(1, Math.min(10, count));
 
   if (count === 1) {
-    return [{ x: 0, y: 0, w: canvasW, h: canvasH }];
+    // Respect the 枠 (spacing) setting here too instead of always filling
+    // edge-to-edge, so a single photo behaves consistently with every
+    // other photo count.
+    return [{
+      x: spacing,
+      y: spacing,
+      w: Math.max(0, canvasW - spacing * 2),
+      h: Math.max(0, canvasH - spacing * 2),
+    }];
   }
 
   if (variant === 1 && ALT_LAYOUTS[count]) {
