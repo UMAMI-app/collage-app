@@ -76,6 +76,15 @@ button { font-family: inherit; }
   flex: 0 0 auto;
   background: var(--panel);
 }
+/* .chip-row.small .chip (3 classes) has higher specificity than .chip.active
+   (2 classes), so without this rule the panel-2/white background above wins
+   over .active's black background - the selected count/ratio chip would
+   render blank white instead of the intended filled-black look. */
+.chip-row.small .chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
 .chip {
   padding: 10px 14px;
   border-radius: 999px;
@@ -312,7 +321,10 @@ button { font-family: inherit; }
      taller テキスト tab's extra content just scrolls within the same height. */
   overflow-y: auto;
   background: var(--panel-2);
-  padding: 14px 14px 30px;
+  /* Trimmed from 14px 14px 30px: the sheet's own height is what pushes
+     the canvas (editor-main, the only flex-grow item) shorter, so less
+     padding here directly means a taller/bigger photo above it. */
+  padding: 8px 14px 12px;
 }
 .panel { display: none; }
 .panel.active { display: block; }
@@ -367,7 +379,7 @@ button { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
   font-size: 13px;
 }
 .field-row > label {
