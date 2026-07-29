@@ -130,7 +130,7 @@ function pinSheetHeightToLayoutTab() {
   // from 0.42 per direct feedback (annotated screenshot) asking for a
   // noticeably bigger photo, with the rest of 枚数/比率/... reachable by
   // scrolling rather than all fitting on screen at once.
-  const maxContentHeight = window.innerHeight * 0.28;
+  const maxContentHeight = window.innerHeight * 0.2;
   measuredHeight = Math.min(measuredHeight, maxContentHeight);
 
   // Only actually touch the DOM if the value changed - writing the same
