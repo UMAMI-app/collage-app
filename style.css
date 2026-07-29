@@ -70,7 +70,12 @@ button { font-family: inherit; }
 .chip-row.small::-webkit-scrollbar {
   display: none; /* Safari/Chrome */
 }
-.chip-row.small .chip { padding: 6px 10px; font-size: 12px; flex: 0 0 auto; }
+.chip-row.small .chip {
+  padding: 8px 14px;
+  font-size: 13px;
+  flex: 0 0 auto;
+  background: var(--panel);
+}
 .chip {
   padding: 10px 14px;
   border-radius: 999px;
@@ -177,7 +182,10 @@ button { font-family: inherit; }
   min-height: 0;
   min-width: 0;
   display: flex;
-  padding: 12px;
+  /* Less bottom padding than the other 3 sides so the photo's max-height:100%
+     box can grow a bit taller, taking back some of the flat empty space that
+     used to sit between the canvas and the tab row above it. */
+  padding: 12px 12px 4px;
   position: relative;
 }
 /* canvas-wrap is given an explicit (definite) width/height rather than just
@@ -442,6 +450,29 @@ button { font-family: inherit; }
 .toggle-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 .toggle-btn.italic-label { font-style: italic; }
 .font-btn-row { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+
+/* Drop-shadow toggle: the native checkbox is visually hidden but still
+   drives state via :checked, so the wrapping label can be styled as one
+   more toggle-btn pill (same look as 斜/左/中/右) instead of a bare
+   checkbox input. */
+.field-row label.toggle-btn {
+  min-width: 0;
+  flex: 0 0 auto;
+  color: var(--text);
+  gap: 0;
+}
+.field-row label.toggle-btn input[type="checkbox"] {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.field-row label.toggle-btn:has(input:checked) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
 
 .hint { color: var(--text-dim); font-size: 13px; padding: 20px 0; text-align: center; }
 .props { }
