@@ -151,10 +151,13 @@ function drawPhotoInCell(ctx, cell, photo, cornerRadius, bgColor, forExport) {
     ctx.fillRect(cell.x, cell.y, cell.w, cell.h);
   } else {
     // Empty slot in the editor: light gray + centered "+" so it's clear
-    // the cell is tappable to add a photo.
-    ctx.fillStyle = "rgba(128,128,128,0.14)";
+    // the cell is tappable to add a photo. Uses flat opaque colors rather
+    // than a translucent overlay - a translucent gray blends into whatever
+    // bgColor is picked (nearly invisible against a black background), so
+    // this needs to look the same regardless of the chosen background.
+    ctx.fillStyle = "#dcdcdc";
     ctx.fillRect(cell.x, cell.y, cell.w, cell.h);
-    ctx.fillStyle = "rgba(128,128,128,0.6)";
+    ctx.fillStyle = "#8a8a8a";
     ctx.font = `${Math.max(20, Math.min(cell.w, cell.h) * 0.25)}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";

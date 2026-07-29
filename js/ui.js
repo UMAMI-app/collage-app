@@ -608,7 +608,6 @@ function wireTemplateModal(state, requestRender) {
     renderTemplateList(state, requestRender);
     $("templateModal").hidden = false;
   });
-  $("closeTemplateModal").addEventListener("click", closeModal);
   $("templateModalClose").addEventListener("click", closeModal);
   $("saveTemplateBtn").addEventListener("click", () => {
     const name = $("templateNameInput").value.trim();
