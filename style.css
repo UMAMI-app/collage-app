@@ -284,25 +284,18 @@ button { font-family: inherit; }
 }
 .tab-btn {
   flex: 1;
-  padding: 10px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 13px 4px;
   background: var(--panel-2);
   color: var(--text-dim);
   border: none;
-  font-size: 13px;
   cursor: pointer;
   border-top: 2px solid transparent;
 }
 .tab-btn.active { color: var(--text); border-top-color: var(--accent); }
-
-.chevron-btn {
-  flex: 0 0 auto;
-  width: 52px;
-  background: var(--panel-2);
-  color: var(--text-dim);
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-}
+.tab-icon { width: 26px; height: 26px; display: block; }
 
 /* A bit more breathing room under the tab row once the sheet is collapsed,
    since the tabs then sit at the very bottom edge of the screen. */
@@ -312,13 +305,11 @@ button { font-family: inherit; }
 
 .bottom-sheet {
   flex: 0 0 auto;
-  /* position:relative contains pinSheetHeightToLayoutTab's brief off-screen
-     measurement (position:absolute) to this box, instead of it falling back
-     to the viewport and causing a visible layout jump elsewhere on the page. */
   position: relative;
-  /* height is set inline by JS, pinned to panel-layout's natural content
-     height (the shorter tab) so there's no wasted space on that tab; the
-     taller テキスト tab's extra content just scrolls within the same height. */
+  /* height is set inline by JS (pinSheetHeightToActivePanel), pinned to
+     whichever of the 4 icon panels is currently active and capped to a
+     fraction of the viewport - taller panels just scroll within that height
+     rather than growing the sheet. */
   overflow-y: auto;
   background: var(--panel-2);
   /* Trimmed from 14px 14px 30px: the sheet's own height is what pushes

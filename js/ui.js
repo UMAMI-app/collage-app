@@ -68,8 +68,7 @@ function wireContinuousStart(el, state) {
 export function initEditor(state, deps) {
   const { requestRender, getCanvasSize, openInlineTextEditor } = deps;
 
-  wireTabs();
-  wireCollapseToggle(requestRender);
+  wireTabs(requestRender);
   wireLayoutPanel(state, requestRender);
   wirePhotoPanel(state, requestRender, getCanvasSize);
   wireTextPanel(state, requestRender, getCanvasSize, openInlineTextEditor);
@@ -87,56 +86,44 @@ export function initEditor(state, deps) {
   updateUndoRedoButtons(state);
   requestRender();
 
-  window.addEventListener("resize", pinSheetHeightToLayoutTab);
+  window.addEventListener("resize", pinSheetHeightToActivePanel);
 }
 
-/** Pins the bottom-sheet's height to however tall panel-layout (the shorter
- *  tab) naturally needs to be, instead of a fixed vh guess sized for the
- *  taller テキスト tab - which left visible empty space under the shorter
- *  レイアウト tab's content. The テキスト tab's extra content now just
- *  scrolls within that same height rather than growing the sheet.
- *  Works even when panel-layout isn't the active tab (e.g. measuring on
- *  resize while テキスト is showing) by briefly rendering it off-screen at
- *  its normal in-flow width, rather than relying on display:none's 0 height. */
-function pinSheetHeightToLayoutTab() {
+/** Pins the bottom-sheet's height to whichever of the 4 icon panels
+ *  (レイアウト/フレーム/テキスト/ドロップシャドウ) is currently active,
+ *  capped at a fraction of the viewport so a tall panel scrolls internally
+ *  instead of shrinking the canvas to fit every row at once. The active
+ *  panel is always the one actually rendered in-flow (every other panel is
+ *  display:none), so its scrollHeight can just be read directly - no
+ *  off-screen measurement trick needed. */
+function pinSheetHeightToActivePanel() {
   const sheet = document.querySelector(".bottom-sheet");
-  // While collapsed, the sheet itself is display:none, so ANY measurement
-  // taken now (even of panel-layout, even via the off-screen trick below)
-  // reads 0 - a display:none ancestor blanks out its whole subtree
-  // regardless of the child's own position/visibility. Skip re-pinning
-  // until it's visible again, so the last-known-good height survives.
+  // While collapsed, the sheet itself is display:none, so any measurement
+  // taken now reads 0 - a display:none ancestor blanks out its whole
+  // subtree regardless of a child's own position/visibility. Skip
+  // re-pinning until it's visible again, so the last-known-good height
+  // survives (re-measured fresh in expandSheet()).
   if (sheet.classList.contains("collapsed")) return;
 
-  const layoutPanel = $("panel-layout");
+  const activePanel = document.querySelector(".panel.active");
+  if (!activePanel) return;
+
   const csSheet = getComputedStyle(sheet);
   const paddingV = parseFloat(csSheet.paddingTop) + parseFloat(csSheet.paddingBottom);
+  let measuredHeight = activePanel.scrollHeight;
 
-  let measuredHeight;
-  if (layoutPanel.classList.contains("active")) {
-    measuredHeight = layoutPanel.scrollHeight;
-  } else {
-    const contentWidth = sheet.clientWidth - parseFloat(csSheet.paddingLeft) - parseFloat(csSheet.paddingRight);
-    const prevCssText = layoutPanel.style.cssText;
-    layoutPanel.style.cssText = `display:block; position:absolute; visibility:hidden; pointer-events:none; width:${contentWidth}px;`;
-    measuredHeight = layoutPanel.scrollHeight;
-    layoutPanel.style.cssText = prevCssText;
-  }
-
-  // Cap how tall the sheet is allowed to grow: panel-layout's full natural
-  // height (with the wider row spacing the user asked for) can now exceed
-  // what comfortably fits on screen alongside the photo. Past this cap the
-  // sheet just scrolls internally (overflow-y: auto, already set) instead
-  // of shrinking the canvas to make room for every row at once. Lowered
-  // from 0.42 per direct feedback (annotated screenshot) asking for a
-  // noticeably bigger photo, with the rest of 枚数/比率/... reachable by
-  // scrolling rather than all fitting on screen at once.
+  // Cap how tall the sheet is allowed to grow: a panel's full natural
+  // height can exceed what comfortably fits on screen alongside the photo.
+  // Past this cap the sheet just scrolls internally (overflow-y: auto,
+  // already set) instead of shrinking the canvas to make room for every
+  // row at once.
   const maxContentHeight = window.innerHeight * 0.2;
   measuredHeight = Math.min(measuredHeight, maxContentHeight);
 
   // Only actually touch the DOM if the value changed - writing the same
   // height on every single state change (e.g. every photo tap/drag, which
-  // has nothing to do with panel-layout's size) was forcing a needless
-  // reflow each time, which is what caused the visible "jerk".
+  // has nothing to do with any panel's size) was forcing a needless
+  // reflow each time, which is what caused a visible "jerk" historically.
   const newHeight = `${measuredHeight + paddingV}px`;
   if (sheet.style.height !== newHeight) {
     sheet.style.height = newHeight;
@@ -144,25 +131,46 @@ function pinSheetHeightToLayoutTab() {
 }
 
 let lastPinnedPhotoCount = null;
-/** Only panel-layout's own content can change its natural height (mainly
- *  the 並び row appearing/disappearing based on photoCount), so re-pinning
- *  on every unrelated state change (photo drags, text edits, ...) was pure
- *  waste - and risked the jerk above. Call this from syncAllFromState
- *  instead of pinning unconditionally. */
-function pinSheetHeightIfPhotoCountChanged(photoCount) {
-  if (photoCount === lastPinnedPhotoCount) return;
+let lastPinnedShadowEnabled = null;
+/** Only two things can change the *active* panel's natural height outside
+ *  of a direct tab switch: photoCount (レイアウト's 並び row appearing/
+ *  disappearing) and the selected text's shadow.enabled (ドロップシャドウ's
+ *  sub-settings appearing/disappearing). Re-pinning on every unrelated
+ *  state change (photo drags, text edits, ...) was pure waste - and risked
+ *  the jerk above - so this only re-measures when one of those two actually
+ *  changed. Call from syncAllFromState instead of pinning unconditionally. */
+function pinSheetHeightIfContentSizeChanged(photoCount, shadowEnabled) {
+  if (photoCount === lastPinnedPhotoCount && shadowEnabled === lastPinnedShadowEnabled) return;
   lastPinnedPhotoCount = photoCount;
-  pinSheetHeightToLayoutTab();
+  lastPinnedShadowEnabled = shadowEnabled;
+  pinSheetHeightToActivePanel();
 }
 
-function wireTabs() {
+/** Icon tab row: tapping a different icon switches to (and expands) that
+ *  panel; tapping the already-active icon again collapses the sheet back
+ *  down to just the icon row. There's no separate chevron button anymore -
+ *  the row is fully occupied by the 4 category icons, so the active icon
+ *  itself doubles as the expand/collapse control. */
+function wireTabs(requestRender) {
   const tabs = [...document.querySelectorAll(".tab-btn")];
   tabs.forEach((btn) => {
     btn.addEventListener("click", () => {
+      const sheet = document.querySelector(".bottom-sheet");
+      if (btn.classList.contains("active") && !sheet.classList.contains("collapsed")) {
+        collapseSheet();
+        requestRender();
+        return;
+      }
       tabs.forEach((b) => b.classList.toggle("active", b === btn));
       document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
       $(btn.dataset.panel).classList.add("active");
       expandSheet();
+      // expandSheet() only re-measures on the collapsed -> expanded
+      // transition; switching between two already-expanded panels (e.g.
+      // フレーム -> ドロップシャドウ while shadow is off) needs its own
+      // re-measure too, since each panel's natural height can differ.
+      pinSheetHeightToActivePanel();
+      requestRender();
     });
   });
 }
@@ -171,43 +179,29 @@ export function switchToTab(panelId) {
   document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.panel === panelId));
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === panelId));
   expandSheet();
+  pinSheetHeightToActivePanel();
 }
 
 function expandSheet() {
   const sheet = document.querySelector(".bottom-sheet");
-  const btn = $("collapseSheetBtn");
   if (sheet.classList.contains("collapsed")) {
     sheet.classList.remove("collapsed");
     document.querySelector(".bottom-tabs").classList.remove("sheet-collapsed");
-    btn.textContent = "▼";
-    btn.title = "設定を隠す";
     // The sheet was skipping re-measurement the whole time it was hidden
-    // (see pinSheetHeightToLayoutTab), so take one fresh measurement now
+    // (see pinSheetHeightToActivePanel), so take one fresh measurement now
     // that it's visible again, in case anything changed while it was collapsed.
-    pinSheetHeightToLayoutTab();
+    pinSheetHeightToActivePanel();
   }
 }
 
-/** Wires the ▼/▲ chevron that collapses the bottom-sheet down to just the
- *  tab row, reclaiming canvas space once the user is done adjusting things.
- *  requestRender is re-run afterward since the canvas's on-screen (CSS) size
- *  changes when the sheet's height changes, and things like the photo/text
- *  action bars and inline text editor are positioned from that size. */
-function wireCollapseToggle(requestRender) {
-  const btn = $("collapseSheetBtn");
-  const sheet = document.querySelector(".bottom-sheet");
-  const tabs = document.querySelector(".bottom-tabs");
-  btn.addEventListener("click", () => {
-    if (sheet.classList.contains("collapsed")) {
-      expandSheet();
-    } else {
-      sheet.classList.add("collapsed");
-      tabs.classList.add("sheet-collapsed");
-      btn.textContent = "▲";
-      btn.title = "設定を表示";
-    }
-    requestRender();
-  });
+/** Collapses the bottom-sheet down to just the icon row, reclaiming canvas
+ *  space. Callers are responsible for re-running requestRender afterward,
+ *  since the canvas's on-screen (CSS) size changes when the sheet's height
+ *  changes, and things like the photo/text action bars and inline text
+ *  editor are positioned from that size. */
+function collapseSheet() {
+  document.querySelector(".bottom-sheet").classList.add("collapsed");
+  document.querySelector(".bottom-tabs").classList.add("sheet-collapsed");
 }
 
 /* ---- Layout panel ---- */
@@ -685,15 +679,12 @@ export function syncAllFromState(state) {
   $("spacingSlider").value = d.spacing; $("spacingVal").textContent = d.spacing;
   $("radiusSlider").value = d.cornerRadius; $("radiusVal").textContent = d.cornerRadius;
   renderLayoutVariantPicker(state, () => {});
-  // 並び row's visibility depends on photoCount, which can change panel-layout's
-  // natural height (e.g. via undo/redo or applying a template) - re-pin only
-  // when photoCount actually changed, not on every unrelated state change.
-  pinSheetHeightIfPhotoCountChanged(d.photoCount);
 
   // The add-buttons row and the settings below it are both always visible
   // in the テキスト tab now; the settings just reflect whichever text is
   // currently selected (or stay at their last values if none is).
   const sel = d.selection;
+  let shadowEnabledForPin = lastPinnedShadowEnabled;
   if (sel && sel.type === "text") {
     const t = d.texts.find((x) => x.id === sel.id);
     if (t) {
@@ -715,6 +706,15 @@ export function syncAllFromState(state) {
       $("shadowBlurSlider").value = t.shadow.blur; $("shadowBlurVal").textContent = t.shadow.blur;
       $("shadowAngleSlider").value = t.shadow.angle; $("shadowAngleVal").textContent = t.shadow.angle;
       $("shadowOpacitySlider").value = t.shadow.opacity; $("shadowOpacityVal").textContent = t.shadow.opacity;
+      shadowEnabledForPin = t.shadow.enabled;
     }
   }
+
+  // 並び row's visibility depends on photoCount (affects panel-layout's
+  // height) and shadowProps' visibility depends on the selected text's
+  // shadow.enabled (affects panel-shadow's height) - both can change via
+  // undo/redo or applying a template, not just direct user interaction.
+  // Re-pin only when either actually changed, not on every unrelated
+  // state change (photo drags, etc.).
+  pinSheetHeightIfContentSizeChanged(d.photoCount, shadowEnabledForPin);
 }
