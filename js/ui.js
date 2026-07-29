@@ -545,6 +545,17 @@ function currentText(state) {
 function wireTopbar(state, requestRender) {
   $("undoBtn").addEventListener("click", () => { state.undo(); requestRender(); });
   $("redoBtn").addEventListener("click", () => { state.redo(); requestRender(); });
+  $("clearAllPhotosBtn").addEventListener("click", () => {
+    if (state.data.photos.every((p) => !p)) return; // already empty, nothing to do
+    if (!confirm("全ての画像を削除します。よろしいですか?")) return;
+    state.beginChange();
+    state.data.photos = state.data.photos.map(() => null);
+    if (state.data.selection && state.data.selection.type === "photo") {
+      state.data.selection = null;
+    }
+    state.notify();
+    requestRender();
+  });
   $("exportBtn").addEventListener("click", async () => {
     const btn = $("exportBtn");
     const original = btn.textContent;

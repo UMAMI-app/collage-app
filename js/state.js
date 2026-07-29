@@ -2,7 +2,7 @@
 // Central app state, undo/redo history, autosave, and the in-memory image
 // registry. Photo pixel data lives in IndexedDB (see db.js); the JSON state
 // only ever stores lightweight "imgId" references to it, which keeps
-// localStorage autosave and undo/redo snapshots cheap.
+// sessionStorage autosave and undo/redo snapshots cheap.
 
 import * as db from "./db.js";
 
@@ -165,7 +165,7 @@ export class AppState {
 
   _autosave() {
     try {
-      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(this.data));
+      sessionStorage.setItem(AUTOSAVE_KEY, JSON.stringify(this.data));
     } catch (e) {
       console.warn("autosave failed", e);
     }
@@ -173,7 +173,7 @@ export class AppState {
 
   static loadAutosave() {
     try {
-      const raw = localStorage.getItem(AUTOSAVE_KEY);
+      const raw = sessionStorage.getItem(AUTOSAVE_KEY);
       if (!raw) return null;
       return JSON.parse(raw);
     } catch (e) {
@@ -182,7 +182,7 @@ export class AppState {
   }
 
   static clearAutosave() {
-    localStorage.removeItem(AUTOSAVE_KEY);
+    sessionStorage.removeItem(AUTOSAVE_KEY);
   }
 }
 

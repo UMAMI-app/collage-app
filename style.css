@@ -471,23 +471,28 @@ button { font-family: inherit; }
    drives state via :checked, so the wrapping label can be styled as one
    more toggle-btn pill (same look as 斜/左/中/右) instead of a bare
    checkbox input. */
-.field-row label.toggle-btn {
-  min-width: 0;
-  flex: 0 0 auto;
-  color: var(--text);
-  gap: 0;
+/* ドロップシャドウ toggle: styled like the ＋テキスト追加 buttons (same
+   .secondary-btn look, in the same .text-add-row layout) instead of a small
+   pill, per direct request. Still driven by a native checkbox so :checked
+   can show on/off - the checkbox itself is visually hidden, and a solid
+   accent-colored border (instead of the resting dashed one) signals "on". */
+.shadow-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
-.field-row label.toggle-btn input[type="checkbox"] {
+.shadow-add-btn input[type="checkbox"] {
   position: absolute;
   width: 0;
   height: 0;
   opacity: 0;
   pointer-events: none;
 }
-.field-row label.toggle-btn:has(input:checked) {
-  background: var(--accent);
+.shadow-add-btn:has(input:checked) {
+  border-style: solid;
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent);
 }
 
 .hint { color: var(--text-dim); font-size: 13px; padding: 20px 0; text-align: center; }
