@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Collage</title>
+<!-- Icon shown when added to the iOS home screen. Source PNG has a
+     transparent background outside its own rounded card, but iOS renders
+     transparency as solid black on home-screen icons - so this is a
+     pre-flattened (white background) copy, not the raw upload, to avoid a
+     black border around the card. iOS applies its own corner-rounding mask
+     on top regardless of the source image's shape. -->
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Collage">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <!-- Hiragino Mincho ProN only has 2 real weights on iOS (regular/bold), so
      the weight slider had no visible effect beyond those 2 steps. Noto Serif
      JP ships as separate static weight files, giving the slider real steps
