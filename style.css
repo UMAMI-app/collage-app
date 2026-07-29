@@ -296,6 +296,10 @@ button { font-family: inherit; }
 }
 .tab-btn.active { color: var(--text); border-top-color: var(--accent); }
 .tab-icon { width: 26px; height: 26px; display: block; }
+/* テキスト/ドロップシャドウ icons are text-glyph shapes that read visually
+   smaller than the stroke-based レイアウト/フレーム icons at the same box
+   size, so they get a ~150% bump to look balanced in the row. */
+.tab-icon-lg { width: 39px; height: 39px; }
 
 /* A bit more breathing room under the tab row once the sheet is collapsed,
    since the tabs then sit at the very bottom edge of the screen. */

@@ -89,61 +89,32 @@ export function initEditor(state, deps) {
   window.addEventListener("resize", pinSheetHeightToActivePanel);
 }
 
-/** Pins the bottom-sheet's height to whichever of the 4 icon panels
- *  (レイアウト/フレーム/テキスト/ドロップシャドウ) is currently active,
- *  capped at a fraction of the viewport so a tall panel scrolls internally
- *  instead of shrinking the canvas to fit every row at once. The active
- *  panel is always the one actually rendered in-flow (every other panel is
- *  display:none), so its scrollHeight can just be read directly - no
- *  off-screen measurement trick needed. */
+/** Sets the bottom-sheet to a fixed height (a fraction of the viewport),
+ *  the same for all 4 icon panels regardless of how much content each one
+ *  actually has - shorter panels (レイアウト/フレーム/ドロップシャドウ off)
+ *  just show some empty space below their last row, taller ones (テキスト,
+ *  ドロップシャドウ on) scroll internally (overflow-y: auto, already set).
+ *  Switching tabs never resizes the sheet, so there's no jump/jerk from one
+ *  panel to the next. */
 function pinSheetHeightToActivePanel() {
   const sheet = document.querySelector(".bottom-sheet");
-  // While collapsed, the sheet itself is display:none, so any measurement
-  // taken now reads 0 - a display:none ancestor blanks out its whole
-  // subtree regardless of a child's own position/visibility. Skip
-  // re-pinning until it's visible again, so the last-known-good height
-  // survives (re-measured fresh in expandSheet()).
+  // While collapsed, the sheet itself is display:none - style changes made
+  // now would still apply once un-collapsed, but there's nothing to gain by
+  // writing them while invisible, so just wait for expandSheet() instead.
   if (sheet.classList.contains("collapsed")) return;
-
-  const activePanel = document.querySelector(".panel.active");
-  if (!activePanel) return;
 
   const csSheet = getComputedStyle(sheet);
   const paddingV = parseFloat(csSheet.paddingTop) + parseFloat(csSheet.paddingBottom);
-  let measuredHeight = activePanel.scrollHeight;
-
-  // Cap how tall the sheet is allowed to grow: a panel's full natural
-  // height can exceed what comfortably fits on screen alongside the photo.
-  // Past this cap the sheet just scrolls internally (overflow-y: auto,
-  // already set) instead of shrinking the canvas to make room for every
-  // row at once.
-  const maxContentHeight = window.innerHeight * 0.2;
-  measuredHeight = Math.min(measuredHeight, maxContentHeight);
+  const targetContentHeight = window.innerHeight * 0.32;
 
   // Only actually touch the DOM if the value changed - writing the same
   // height on every single state change (e.g. every photo tap/drag, which
-  // has nothing to do with any panel's size) was forcing a needless
+  // has nothing to do with the sheet's size) was forcing a needless
   // reflow each time, which is what caused a visible "jerk" historically.
-  const newHeight = `${measuredHeight + paddingV}px`;
+  const newHeight = `${targetContentHeight + paddingV}px`;
   if (sheet.style.height !== newHeight) {
     sheet.style.height = newHeight;
   }
-}
-
-let lastPinnedPhotoCount = null;
-let lastPinnedShadowEnabled = null;
-/** Only two things can change the *active* panel's natural height outside
- *  of a direct tab switch: photoCount (レイアウト's 並び row appearing/
- *  disappearing) and the selected text's shadow.enabled (ドロップシャドウ's
- *  sub-settings appearing/disappearing). Re-pinning on every unrelated
- *  state change (photo drags, text edits, ...) was pure waste - and risked
- *  the jerk above - so this only re-measures when one of those two actually
- *  changed. Call from syncAllFromState instead of pinning unconditionally. */
-function pinSheetHeightIfContentSizeChanged(photoCount, shadowEnabled) {
-  if (photoCount === lastPinnedPhotoCount && shadowEnabled === lastPinnedShadowEnabled) return;
-  lastPinnedPhotoCount = photoCount;
-  lastPinnedShadowEnabled = shadowEnabled;
-  pinSheetHeightToActivePanel();
 }
 
 /** Icon tab row: tapping a different icon switches to (and expands) that
@@ -684,7 +655,6 @@ export function syncAllFromState(state) {
   // in the テキスト tab now; the settings just reflect whichever text is
   // currently selected (or stay at their last values if none is).
   const sel = d.selection;
-  let shadowEnabledForPin = lastPinnedShadowEnabled;
   if (sel && sel.type === "text") {
     const t = d.texts.find((x) => x.id === sel.id);
     if (t) {
@@ -706,15 +676,6 @@ export function syncAllFromState(state) {
       $("shadowBlurSlider").value = t.shadow.blur; $("shadowBlurVal").textContent = t.shadow.blur;
       $("shadowAngleSlider").value = t.shadow.angle; $("shadowAngleVal").textContent = t.shadow.angle;
       $("shadowOpacitySlider").value = t.shadow.opacity; $("shadowOpacityVal").textContent = t.shadow.opacity;
-      shadowEnabledForPin = t.shadow.enabled;
     }
   }
-
-  // 並び row's visibility depends on photoCount (affects panel-layout's
-  // height) and shadowProps' visibility depends on the selected text's
-  // shadow.enabled (affects panel-shadow's height) - both can change via
-  // undo/redo or applying a template, not just direct user interaction.
-  // Re-pin only when either actually changed, not on every unrelated
-  // state change (photo drags, etc.).
-  pinSheetHeightIfContentSizeChanged(d.photoCount, shadowEnabledForPin);
 }
