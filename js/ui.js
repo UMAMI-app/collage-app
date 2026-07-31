@@ -472,6 +472,7 @@ function wireTextProps(state, requestRender) {
     const t = currentText(state); if (!t) return;
     state.beginChange();
     t.shadow.enabled = e.target.checked;
+    syncShadowAddLabel(e.target.checked);
     state.notify(); requestRender();
   });
 
@@ -532,6 +533,10 @@ function syncFontButtons(font) {
   document.querySelectorAll(".font-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.font === font);
   });
+}
+
+function syncShadowAddLabel(enabled) {
+  $("shadowAddLabel").textContent = enabled ? "−ドロップシャドウ削除" : "＋ドロップシャドウ追加";
 }
 
 function currentText(state) {
@@ -685,6 +690,7 @@ export function syncAllFromState(state) {
       $("textLetterSpacingSlider").value = t.letterSpacing; $("textLetterSpacingVal").textContent = t.letterSpacing;
       $("shadowToggle").checked = t.shadow.enabled;
       $("shadowProps").hidden = !t.shadow.enabled;
+      syncShadowAddLabel(t.shadow.enabled);
       $("shadowColorPicker").value = t.shadow.color;
       $("shadowDistSlider").value = t.shadow.distance; $("shadowDistVal").textContent = t.shadow.distance;
       $("shadowBlurSlider").value = t.shadow.blur; $("shadowBlurVal").textContent = t.shadow.blur;
