@@ -429,29 +429,31 @@ button { font-family: inherit; }
 .swatch.white { background: #fff; }
 .swatch.black { background: #000; margin-right: 6px; }
 
-.variant-row { display: flex; gap: 6px; }
+.variant-row { display: flex; gap: 8px; }
 .variant-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--panel);
   cursor: pointer;
+  flex: 0 0 auto;
 }
-.variant-btn.active { background: var(--panel-2); }
+.variant-btn.active { background: var(--accent); border-color: var(--accent); }
 /* Shown (not hidden) for every photo count now, even ones with no real
    alternate arrangement, so grey out + block interaction instead. */
 .variant-btn.unavailable { opacity: 0.35; cursor: default; }
 .mini-grid-icon {
   display: grid;
   gap: 2px;
-  width: 26px;
-  height: 20px;
+  width: 22px;
+  height: 16px;
 }
 .mini-grid-cell { background: var(--text-dim); border-radius: 1px; }
-.variant-btn.active .mini-grid-cell { background: var(--accent); }
+.variant-btn.active .mini-grid-cell { background: #fff; }
 
 .toggle-btn {
   padding: 8px 14px;
