@@ -16,10 +16,10 @@ export function uid(prefix = "id") {
 
 export function defaultShadow() {
   return {
-    enabled: false,
+    enabled: true,
     color: "#000000",
     distance: 4,
-    blur: 6,
+    blur: 20,
     angle: 45,
     opacity: 60,
   };
@@ -29,17 +29,17 @@ export function defaultTextObj(canvasW, canvasH, orientation = "horizontal") {
   return {
     id: uid("text"),
     content: orientation === "vertical" ? "縦書き" : "テキスト",
-    font: "'Noto Sans JP', 'Hiragino Sans', sans-serif",
-    size: 150,
+    font: "'Noto Serif JP', 'Hiragino Mincho ProN', serif",
+    size: 200,
     color: "#ffffff",
-    weight: 400,
+    weight: 600,
     italic: false,
-    align: "center",
+    align: "left",
     orientation, // 'horizontal' | 'vertical'
     rotation: 0, // no longer user-editable; kept at 0
     opacity: 100,
     lineHeight: 1.2,
-    letterSpacing: 0,
+    letterSpacing: 30,
     x: canvasW / 2,
     y: canvasH / 2,
     shadow: defaultShadow(),
@@ -55,8 +55,8 @@ export function createDefaultState(count, ratioId) {
     photoCount: count,
     ratioId,
     bgColor: "#ffffff",
-    spacing: 8,
-    cornerRadius: 0,
+    spacing: 25,
+    cornerRadius: 30,
     layoutVariant: 0, // 0 = standard grid; 1 = alternate (only meaningful for counts 2/6/8)
     photos: Array.from({ length: count }, defaultPhotoSlotData),
     texts: [],

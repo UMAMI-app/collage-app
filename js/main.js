@@ -13,7 +13,7 @@ const inlineTextEditArea = document.getElementById("inlineTextEditArea");
 const photoActionBar = document.getElementById("photoActionBar");
 const textActionBar = document.getElementById("textActionBar");
 
-const DEFAULT_PHOTO_COUNT = 4;
+const DEFAULT_PHOTO_COUNT = 1;
 const DEFAULT_RATIO_ID = "1:1";
 
 const startScreen = document.getElementById("startScreen");
