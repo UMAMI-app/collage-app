@@ -44,6 +44,46 @@ function minCoverScaleForRotation(cellW, cellH, naturalW, naturalH, offsetX, off
   return Math.max((2 * maxLx) / naturalW, (2 * maxLy) / naturalH);
 }
 
+/** Clamps a candidate pan offset so a 1-finger drag simply stops dead at the
+ *  edge (like Instagram/most crop tools) instead of the image auto-zooming
+ *  to keep covering the cell (which is what minCoverScaleForRotation would
+ *  otherwise force at render time). Given the image's current total scale
+ *  and rotation, this finds the safe range of offsets that still leaves the
+ *  cell fully covered, and returns the offset clamped into that range.
+ *
+ *  Works at any rotation by clamping in the image's own "de-rotated" space
+ *  (where the safe region is a plain axis-aligned box) and rotating the
+ *  clamped result back - the rotation-0 case is just the plain min/max
+ *  pan clamp used by most photo editors. */
+export function clampPanOffset(offsetX, offsetY, cellW, cellH, naturalW, naturalH, totalScale, rotationDeg) {
+  const rad = (rotationDeg * Math.PI) / 180;
+  const cos = Math.cos(rad), sin = Math.sin(rad);
+
+  // De-rotate the candidate offset: o' = R(-theta) * offset
+  const ox = offsetX * cos + offsetY * sin;
+  const oy = -offsetX * sin + offsetY * cos;
+
+  const hiw = (naturalW * totalScale) / 2;
+  const hih = (naturalH * totalScale) / 2;
+  const hw = cellW / 2, hh = cellH / 2;
+  // Half-extents of the cell's own bounding box once de-rotated into the
+  // image's local space (same quantity minCoverScaleForRotation computes
+  // for the centered/offset-0 case).
+  const ex = hw * Math.abs(cos) + hh * Math.abs(sin);
+  const ey = hw * Math.abs(sin) + hh * Math.abs(cos);
+  const maxOx = Math.max(0, hiw - ex);
+  const maxOy = Math.max(0, hih - ey);
+
+  const cox = Math.max(-maxOx, Math.min(maxOx, ox));
+  const coy = Math.max(-maxOy, Math.min(maxOy, oy));
+
+  // Rotate the clamped offset back: offset = R(theta) * o'_clamped
+  return {
+    x: cox * cos - coy * sin,
+    y: cox * sin + coy * cos,
+  };
+}
+
 /** Build the canvas font string for a text object (numeric weight, e.g. "700"). */
 function fontString(t) {
   const parts = [];

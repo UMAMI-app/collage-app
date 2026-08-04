@@ -9,7 +9,8 @@
 //          2-finger pinch = scale font size.
 //  empty cell: tap = request a photo for that slot.
 
-import { getCellRects, textLocalBounds } from "./render.js";
+import { getCellRects, textLocalBounds, coverBaseScale, clampPanOffset } from "./render.js";
+import { imageRegistry } from "./state.js";
 
 const LONG_PRESS_MS = 480;
 const MOVE_CANCEL_PX = 10;
@@ -232,8 +233,22 @@ export function attachGestures(canvas, ctx, state, callbacks) {
         ensureChangeBegun(gesture);
         const p = state.data.photos[gesture.index];
         if (p) {
-          p.offsetX = gesture.base.offsetX + (pt.x - gesture.startPt.x);
-          p.offsetY = gesture.base.offsetY + (pt.y - gesture.startPt.y);
+          const rawX = gesture.base.offsetX + (pt.x - gesture.startPt.x);
+          const rawY = gesture.base.offsetY + (pt.y - gesture.startPt.y);
+          // Clamp the pan itself at the point where the image edge would
+          // reach the cell edge, so dragging past it just stops dead
+          // instead of the image auto-zooming to keep covering the cell.
+          const cell = cellCenter(gesture.index);
+          const entry = imageRegistry.get(p.imgId);
+          if (cell && entry) {
+            const totalScale = coverBaseScale(cell.w, cell.h, entry.naturalW, entry.naturalH) * (p.scale || 1);
+            const clamped = clampPanOffset(rawX, rawY, cell.w, cell.h, entry.naturalW, entry.naturalH, totalScale, p.rotation || 0);
+            p.offsetX = clamped.x;
+            p.offsetY = clamped.y;
+          } else {
+            p.offsetX = rawX;
+            p.offsetY = rawY;
+          }
         }
         onRequestRender();
       }
