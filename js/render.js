@@ -22,8 +22,11 @@ export function coverBaseScale(cellW, cellH, naturalW, naturalH) {
  *  At rotation 0 this reduces exactly to coverBaseScale(). Works for any pan
  *  offset: rather than assuming a centered image, it transforms the cell's 4
  *  corners into the image's own (unrotated) local space and sizes the image
- *  to contain the farthest-reaching corner on each axis. */
-function minCoverScaleForRotation(cellW, cellH, naturalW, naturalH, offsetX, offsetY, rotationDeg) {
+ *  to contain the farthest-reaching corner on each axis. Exported so the
+ *  drag-clamp in gestures.js can find out the *actual* scale currently on
+ *  screen (which may already be auto-boosted above the user's own pinch
+ *  scale by rotation) instead of clamping against a stale, smaller value. */
+export function minCoverScaleForRotation(cellW, cellH, naturalW, naturalH, offsetX, offsetY, rotationDeg) {
   const rad = (rotationDeg * Math.PI) / 180;
   const cos = Math.cos(rad), sin = Math.sin(rad);
   const cx = cellW / 2 + offsetX;

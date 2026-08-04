@@ -9,7 +9,7 @@
 //          2-finger pinch = scale font size.
 //  empty cell: tap = request a photo for that slot.
 
-import { getCellRects, textLocalBounds, coverBaseScale, clampPanOffset } from "./render.js";
+import { getCellRects, textLocalBounds, coverBaseScale, clampPanOffset, minCoverScaleForRotation } from "./render.js";
 import { imageRegistry } from "./state.js";
 
 const LONG_PRESS_MS = 480;
@@ -241,8 +241,20 @@ export function attachGestures(canvas, ctx, state, callbacks) {
           const cell = cellCenter(gesture.index);
           const entry = imageRegistry.get(p.imgId);
           if (cell && entry) {
-            const totalScale = coverBaseScale(cell.w, cell.h, entry.naturalW, entry.naturalH) * (p.scale || 1);
-            const clamped = clampPanOffset(rawX, rawY, cell.w, cell.h, entry.naturalW, entry.naturalH, totalScale, p.rotation || 0);
+            const rotation = p.rotation || 0;
+            const userTotalScale = coverBaseScale(cell.w, cell.h, entry.naturalW, entry.naturalH) * (p.scale || 1);
+            // The scale actually on screen right now may already be boosted
+            // above the user's own pinch scale (rotation can force that -
+            // see render.js). Clamping against the un-boosted scale would
+            // treat the image as smaller than it really is and could leave
+            // zero room to pan at all. Use whichever is bigger, evaluated at
+            // the drag's starting offset (rotation can't change mid-drag).
+            const currentMinScale = minCoverScaleForRotation(
+              cell.w, cell.h, entry.naturalW, entry.naturalH,
+              gesture.base.offsetX, gesture.base.offsetY, rotation
+            );
+            const effectiveScale = Math.max(userTotalScale, currentMinScale);
+            const clamped = clampPanOffset(rawX, rawY, cell.w, cell.h, entry.naturalW, entry.naturalH, effectiveScale, rotation);
             p.offsetX = clamped.x;
             p.offsetY = clamped.y;
           } else {
