@@ -227,7 +227,9 @@ function bootEditor() {
       state.notify();
       // Selecting a text object shows its properties inside the テキスト tab,
       // so jump there automatically (mirrors the old 選択中 tab's role).
+      // Selecting a photo does the same for the 回転 tab's slider.
       if (sel && sel.type === "text") switchToTab("panel-text");
+      if (sel && sel.type === "photo") switchToTab("panel-rotate");
       // The long-press action bars only belong to the object they were
       // raised for; any other selection change (or none) dismisses them.
       if (!(sel && sel.type === "text" && sel.id === textActionBarId)) {

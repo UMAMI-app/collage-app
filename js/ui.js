@@ -71,6 +71,7 @@ export function initEditor(state, deps) {
   wireTabs(requestRender);
   wireLayoutPanel(state, requestRender);
   wirePhotoPanel(state, requestRender, getCanvasSize);
+  wireRotatePanel(state, requestRender);
   wireTextPanel(state, requestRender, getCanvasSize, openInlineTextEditor);
   wireTextProps(state, requestRender);
   wireTopbar(state, requestRender);
@@ -372,6 +373,50 @@ export function requestPhotoForSlot(index) {
   $("fileInput").click();
 }
 
+/* ---- Rotate panel (回転 tab: slider-only rotation for the selected photo) ---- */
+
+// Photo rotation is stored normalized to 0-359deg (matches the existing 90°
+// quick-rotate button), but the slider itself is -180..+180 with 0 in the
+// middle per spec, so these two just convert between the two ranges.
+function toStoredDeg(display) {
+  return ((display % 360) + 360) % 360;
+}
+function toDisplayDeg(stored) {
+  const d = ((stored % 360) + 360) % 360;
+  return d > 180 ? d - 360 : d;
+}
+function formatDeg(display) {
+  const rounded = Math.round(display);
+  if (rounded > 0) return `+${rounded}°`;
+  return `${rounded}°`; // 0 and negative values already carry their own sign (or no sign for 0)
+}
+
+const ROTATE_SNAP_ZONE_DEG = 2;
+
+function currentPhoto(state) {
+  const s = state.data.selection;
+  if (!s || s.type !== "photo") return null;
+  return state.data.photos[s.index] || null;
+}
+
+function wireRotatePanel(state, requestRender) {
+  const slider = $("rotateSlider");
+  wireContinuousStart(slider, state);
+  slider.addEventListener("input", () => {
+    const p = currentPhoto(state); if (!p) return;
+    let display = Number(slider.value);
+    // Auto-snap to dead level once close enough, so it's easy to land
+    // exactly on 0° without hunting for the exact pixel.
+    if (Math.abs(display) <= ROTATE_SNAP_ZONE_DEG) {
+      display = 0;
+      slider.value = "0";
+    }
+    p.rotation = toStoredDeg(display);
+    $("rotateVal").textContent = formatDeg(display);
+    state.notify(); requestRender();
+  });
+}
+
 /* ---- Text panel ---- */
 
 function wireTextPanel(state, requestRender, getCanvasSize, openInlineTextEditor) {
@@ -669,6 +714,20 @@ export function syncAllFromState(state) {
   $("spacingSlider").value = d.spacing; $("spacingVal").textContent = d.spacing;
   $("radiusSlider").value = d.cornerRadius; $("radiusVal").textContent = d.cornerRadius;
   renderLayoutVariantPicker(state, () => {});
+
+  // 回転 tab: only meaningful once a photo is selected, so show a hint in
+  // its place otherwise.
+  const p = currentPhoto(state);
+  if (p) {
+    $("rotateHint").hidden = true;
+    $("rotateProps").hidden = false;
+    const display = toDisplayDeg(p.rotation || 0);
+    $("rotateSlider").value = display;
+    $("rotateVal").textContent = formatDeg(display);
+  } else {
+    $("rotateHint").hidden = false;
+    $("rotateProps").hidden = true;
+  }
 
   // The add-buttons row and the settings below it are both always visible
   // in the テキスト tab now; the settings just reflect whichever text is

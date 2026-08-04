@@ -15,6 +15,35 @@ export function coverBaseScale(cellW, cellH, naturalW, naturalH) {
   return Math.max(cellW / naturalW, cellH / naturalH);
 }
 
+/** Minimum image scale (applied to the image's natural pixel size) needed so
+ *  that, once rotated by rotationDeg around its own center - which may be
+ *  panned away from the cell's center by offsetX/offsetY - the image still
+ *  fully covers the cell rect with no background showing at the corners.
+ *  At rotation 0 this reduces exactly to coverBaseScale(). Works for any pan
+ *  offset: rather than assuming a centered image, it transforms the cell's 4
+ *  corners into the image's own (unrotated) local space and sizes the image
+ *  to contain the farthest-reaching corner on each axis. */
+function minCoverScaleForRotation(cellW, cellH, naturalW, naturalH, offsetX, offsetY, rotationDeg) {
+  const rad = (rotationDeg * Math.PI) / 180;
+  const cos = Math.cos(rad), sin = Math.sin(rad);
+  const cx = cellW / 2 + offsetX;
+  const cy = cellH / 2 + offsetY;
+  const corners = [
+    [-cx, -cy],
+    [cellW - cx, -cy],
+    [-cx, cellH - cy],
+    [cellW - cx, cellH - cy],
+  ];
+  let maxLx = 0, maxLy = 0;
+  for (const [vx, vy] of corners) {
+    const lx = vx * cos + vy * sin;
+    const ly = -vx * sin + vy * cos;
+    maxLx = Math.max(maxLx, Math.abs(lx));
+    maxLy = Math.max(maxLy, Math.abs(ly));
+  }
+  return Math.max((2 * maxLx) / naturalW, (2 * maxLy) / naturalH);
+}
+
 /** Build the canvas font string for a text object (numeric weight, e.g. "700"). */
 function fontString(t) {
   const parts = [];
@@ -138,10 +167,20 @@ function drawPhotoInCell(ctx, cell, photo, cornerRadius, bgColor, forExport) {
   ctx.clip();
 
   if (entry) {
+    const rotation = photo.rotation || 0;
+    const offsetX = photo.offsetX || 0;
+    const offsetY = photo.offsetY || 0;
     const baseScale = coverBaseScale(cell.w, cell.h, entry.naturalW, entry.naturalH);
-    const totalScale = baseScale * (photo.scale || 1);
-    ctx.translate(cell.x + cell.w / 2 + (photo.offsetX || 0), cell.y + cell.h / 2 + (photo.offsetY || 0));
-    ctx.rotate(((photo.rotation || 0) * Math.PI) / 180);
+    const userTotalScale = baseScale * (photo.scale || 1);
+    // At any rotation angle other than 0, simply keeping the same on-screen
+    // scale the user picked at 0° can leave the cell's corners uncovered
+    // (the image no longer reaches them once it's tilted). Boost the scale
+    // up to whatever this rotation + pan actually requires to stay gapless,
+    // but never *shrink* below the user's own manual zoom.
+    const minRotatedScale = minCoverScaleForRotation(cell.w, cell.h, entry.naturalW, entry.naturalH, offsetX, offsetY, rotation);
+    const totalScale = Math.max(userTotalScale, minRotatedScale);
+    ctx.translate(cell.x + cell.w / 2 + offsetX, cell.y + cell.h / 2 + offsetY);
+    ctx.rotate((rotation * Math.PI) / 180);
     ctx.scale(totalScale, totalScale);
     ctx.drawImage(entry.img, -entry.naturalW / 2, -entry.naturalH / 2, entry.naturalW, entry.naturalH);
   } else if (forExport) {

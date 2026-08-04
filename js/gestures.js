@@ -2,8 +2,8 @@
 // Pointer-event based gesture engine for the canvas:
 //  photo:  tap = select, long-press = show 90°/delete bar (long-press+drag
 //          from there = reorder/swap slots), 1-finger drag (no long-press)
-//          = pan image inside its cell, 2-finger pinch = scale, 2-finger
-//          twist = rotate.
+//          = pan image inside its cell, 2-finger pinch = scale only (no
+//          twist-to-rotate - rotation is done via the 回転 tab's slider).
 //  text:   tap = select, double-tap = edit in place, long-press = show
 //          duplicate/delete bar, 1-finger drag = move,
 //          2-finger pinch = scale font size.
@@ -16,9 +16,6 @@ const MOVE_CANCEL_PX = 10;
 const TAP_MAX_MOVE_PX = 8;
 const DOUBLE_TAP_MS = 400;
 
-function angleDeg(dx, dy) {
-  return (Math.atan2(dy, dx) * 180) / Math.PI;
-}
 function dist(dx, dy) {
   return Math.hypot(dx, dy);
 }
@@ -117,7 +114,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
             onRequestRender();
           }
         }, LONG_PRESS_MS),
-        base: { offsetX: p.offsetX || 0, offsetY: p.offsetY || 0, scale: p.scale || 1, rotation: p.rotation || 0 },
+        base: { offsetX: p.offsetX || 0, offsetY: p.offsetY || 0, scale: p.scale || 1 },
       };
       return;
     }
@@ -165,8 +162,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
       if (gesture.longPressTimer) clearTimeout(gesture.longPressTimer);
       const pts = [...pointers.values()];
       const d0 = dist(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-      const a0 = angleDeg(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
-      gesture.pinch = { d0, a0 };
+      gesture.pinch = { d0 };
       ensureChangeBegun(gesture);
       if (gesture.kind === "photo") setManipulating(true);
     }
@@ -181,15 +177,14 @@ export function attachGestures(canvas, ctx, state, callbacks) {
     if (pointers.size >= 2 && gesture.pinch && (gesture.kind === "photo" || gesture.kind === "text")) {
       const pts = [...pointers.values()];
       const d1 = dist(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-      const a1 = angleDeg(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
       const scaleRatio = gesture.pinch.d0 > 0 ? d1 / gesture.pinch.d0 : 1;
-      const rotDelta = a1 - gesture.pinch.a0;
 
       if (gesture.kind === "photo") {
+        // Pinch only scales the photo now - rotation is handled exclusively
+        // by the 回転 tab's slider, not by a 2-finger twist gesture.
         const p = state.data.photos[gesture.index];
         if (p) {
           p.scale = clamp(gesture.base.scale * scaleRatio, 0.2, 8);
-          p.rotation = snapToRightAngle(norm360(gesture.base.rotation + rotDelta));
         }
       } else {
         // Text has no rotation control - pinch only scales font size.
@@ -277,7 +272,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
       if (gesture.kind === "photo") {
         const p = state.data.photos[gesture.index];
         gesture.startPt = remaining;
-        gesture.base = { offsetX: p?.offsetX || 0, offsetY: p?.offsetY || 0, scale: p?.scale || 1, rotation: p?.rotation || 0 };
+        gesture.base = { offsetX: p?.offsetX || 0, offsetY: p?.offsetY || 0, scale: p?.scale || 1 };
         gesture.pinch = null;
       } else if (gesture.kind === "text") {
         const t = state.data.texts.find((x) => x.id === gesture.id);
@@ -382,13 +377,3 @@ export function attachGestures(canvas, ctx, state, callbacks) {
 }
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
-
-const SNAP_THRESHOLD_DEG = 6;
-/** Snaps to the nearest multiple of 90 deg (i.e. upright/on-its-side) when
- *  close enough, so manually rotating a photo can land it perfectly level. */
-export function snapToRightAngle(deg) {
-  const nearest = Math.round(deg / 90) * 90;
-  const diff = Math.min(Math.abs(deg - nearest), 360 - Math.abs(deg - nearest));
-  return diff <= SNAP_THRESHOLD_DEG ? norm360(nearest) : deg;
-}
-function norm360(deg) { let d = deg % 360; if (d < 0) d += 360; return d; }
