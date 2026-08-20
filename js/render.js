@@ -174,8 +174,12 @@ function drawVerticalText(ctx, t, lines) {
     [...line].forEach((ch, i) => {
       const y = startY + i * charPitch;
       if (VERTICAL_ROTATE_CHARS.has(ch)) {
+        // textAlign=center anchors on the glyph's normal horizontal-mode
+        // baseline metrics, not its rotated ink - which lands this stroke
+        // slightly off-column (to the right) once rotated. Nudge left by
+        // about one stroke-width to re-center it visually.
         ctx.save();
-        ctx.translate(x, y);
+        ctx.translate(x - t.size * 0.1, y);
         ctx.rotate(-Math.PI / 2);
         ctx.scale(-1, 1);
         ctx.fillText(ch, 0, 0);
