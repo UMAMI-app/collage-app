@@ -149,6 +149,14 @@ function drawHorizontalText(ctx, t, lines) {
   });
 }
 
+/** Characters that are drawn as a horizontal stroke by default but need to
+ *  stand upright (rotated 90°) once set in vertical (tategaki) text -
+ *  canvas has no built-in vertical glyph substitution the way CSS
+ *  text-orientation does, so this has to be done by hand. ー is the long
+ *  vowel mark (the one most commonly hit); the wave dash/tilde and em/en
+ *  dash have the exact same problem so they're included too. */
+const VERTICAL_ROTATE_CHARS = new Set(["ー", "〜", "～", "—", "–"]);
+
 /** Vertical (tategaki) layout: each \n-separated line becomes one column of
  *  characters running top-to-bottom; columns run right-to-left. */
 function drawVerticalText(ctx, t, lines) {
@@ -162,7 +170,16 @@ function drawVerticalText(ctx, t, lines) {
     const x = startX - colIndex * colPitch;
     const startY = -((line.length - 1) * charPitch) / 2;
     [...line].forEach((ch, i) => {
-      ctx.fillText(ch, x, startY + i * charPitch);
+      const y = startY + i * charPitch;
+      if (VERTICAL_ROTATE_CHARS.has(ch)) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.PI / 2);
+        ctx.fillText(ch, 0, 0);
+        ctx.restore();
+      } else {
+        ctx.fillText(ch, x, y);
+      }
     });
   });
 }
