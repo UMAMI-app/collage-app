@@ -174,11 +174,10 @@ function drawVerticalText(ctx, t, lines) {
       if (VERTICAL_ROTATE_CHARS.has(ch)) {
         ctx.save();
         ctx.translate(x, y);
-        ctx.rotate(Math.PI / 2);
-        // The glyph also needs a left-right mirror on top of the rotation -
-        // without it, the rotated stroke reads backwards (e.g. ー's subtle
-        // taper ends up facing the wrong way).
-        ctx.scale(-1, 1);
+        // Rotated the other way (-90° instead of +90°, a plain 180°
+        // difference) - a mirror (scale) isn't needed, just the opposite
+        // turn direction.
+        ctx.rotate(-Math.PI / 2);
         ctx.fillText(ch, 0, 0);
         ctx.restore();
       } else {
