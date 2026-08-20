@@ -150,11 +150,13 @@ function drawHorizontalText(ctx, t, lines) {
 }
 
 /** Characters that are drawn as a horizontal stroke by default but need to
- *  stand upright (rotated 90°) once set in vertical (tategaki) text -
- *  canvas has no built-in vertical glyph substitution the way CSS
- *  text-orientation does, so this has to be done by hand. ー is the long
- *  vowel mark (the one most commonly hit); the wave dash/tilde and em/en
- *  dash have the exact same problem so they're included too. */
+ *  stand upright once set in vertical (tategaki) text. Canvas's fillText has
+ *  no way to request a font's dedicated vertical-alternate glyph (the
+ *  'vert'/'vrt2' OpenType feature browsers use for tategaki), so the actual
+ *  on-screen glyph here is the regular horizontal one, transformed by hand.
+ *  Rotating alone always came out mirrored one way or the other - matching
+ *  the real rendering (confirmed against screenshots of both) takes a
+ *  rotation *and* a horizontal flip together. */
 const VERTICAL_ROTATE_CHARS = new Set(["ー", "〜", "～", "—", "–"]);
 
 /** Vertical (tategaki) layout: each \n-separated line becomes one column of
@@ -174,10 +176,8 @@ function drawVerticalText(ctx, t, lines) {
       if (VERTICAL_ROTATE_CHARS.has(ch)) {
         ctx.save();
         ctx.translate(x, y);
-        // Rotated the other way (-90° instead of +90°, a plain 180°
-        // difference) - a mirror (scale) isn't needed, just the opposite
-        // turn direction.
         ctx.rotate(-Math.PI / 2);
+        ctx.scale(-1, 1);
         ctx.fillText(ch, 0, 0);
         ctx.restore();
       } else {
