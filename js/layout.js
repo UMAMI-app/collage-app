@@ -52,6 +52,9 @@ export function exportPixelSize(ratioId, longSide = 2048) {
 // Expressed as a uniform rows x cols grid.
 export const ALT_LAYOUTS = {
   2: { rows: 2, cols: 1 }, // stacked top/bottom instead of side by side
+  3: { rows: 3, cols: 1 }, // single column of 3 wide (landscape) cells
+  4: { rows: 4, cols: 1 }, // single column of 4 wide (landscape) cells
+  5: { rows: 5, cols: 1 }, // single column of 5 wide (landscape) cells
   6: { rows: 2, cols: 3 }, // wide 3-across instead of tall 2-across
   8: { rows: 2, cols: 4 }, // wide 4-across instead of tall 2-across
   10: { rows: 2, cols: 5 }, // wide 5-across instead of tall 2-across
