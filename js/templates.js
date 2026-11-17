@@ -7,6 +7,14 @@ import { uid } from "./state.js";
 
 const KEY = "collage-app:templates:v1";
 
+/** Built-in templates, always listed first and not deletable. They only
+ *  switch the A/B/C... corner-label style; everything else is left alone. */
+export const BUILTIN_TEMPLATES = [
+  { id: "builtin-label-circle", name: "ラベル A/B/C・白丸", builtin: true, labelStyle: "circle" },
+  { id: "builtin-label-shadow", name: "ラベル A/B/C・ドロップシャドウ", builtin: true, labelStyle: "shadow" },
+  { id: "builtin-label-none", name: "ラベルなし", builtin: true, labelStyle: null },
+];
+
 export function listTemplates() {
   try {
     const raw = localStorage.getItem(KEY);
@@ -32,6 +40,7 @@ export function saveTemplate(name, data) {
     spacing: data.spacing,
     cornerRadius: data.cornerRadius,
     layoutVariant: data.layoutVariant || 0,
+    labelStyle: data.labelStyle || null,
     texts: JSON.parse(JSON.stringify(data.texts)),
   };
   list.push(tpl);
@@ -48,6 +57,12 @@ export function deleteTemplate(id) {
 export function applyTemplateToState(state, tpl) {
   state.beginChange();
   const d = state.data;
+  if (tpl.builtin) {
+    d.labelStyle = tpl.labelStyle || null;
+    state.notify();
+    return;
+  }
+  d.labelStyle = tpl.labelStyle || null;
   d.ratioId = tpl.ratioId;
   d.bgColor = tpl.bgColor;
   d.spacing = tpl.spacing;

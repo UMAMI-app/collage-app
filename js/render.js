@@ -191,6 +191,44 @@ function drawVerticalText(ctx, t, lines) {
   });
 }
 
+/** A/B/C... badges in each cell's top-left corner (fixed position, sized
+ *  relative to the cell so they scale with photo count and export size). */
+function drawCellLabels(ctx, cells, style) {
+  const labelFont = "'Noto Serif JP', 'Hiragino Mincho ProN', serif";
+  cells.forEach((cell, i) => {
+    const letter = String.fromCharCode(65 + (i % 26));
+    const m = Math.min(cell.w, cell.h);
+    ctx.save();
+    ctx.textBaseline = "middle";
+    if (style === "circle") {
+      const d = m * 0.29;
+      const inset = m * 0.03;
+      const cx = cell.x + inset + d / 2;
+      const cy = cell.y + inset + d / 2;
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(cx, cy, d / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#000000";
+      ctx.font = `600 ${d * 0.62}px ${labelFont}`;
+      ctx.textAlign = "center";
+      ctx.fillText(letter, cx, cy + d * 0.03);
+    } else {
+      const fs = m * 0.24;
+      const inset = m * 0.045;
+      ctx.font = `600 ${fs}px ${labelFont}`;
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#ffffff";
+      ctx.shadowColor = "rgba(0,0,0,0.6)";
+      ctx.shadowBlur = m * 0.03;
+      ctx.shadowOffsetX = m * 0.012;
+      ctx.shadowOffsetY = m * 0.015;
+      ctx.fillText(letter, cell.x + inset, cell.y + inset + fs * 0.45);
+    }
+    ctx.restore();
+  });
+}
+
 function drawTextObject(ctx, t) {
   if (!t.content) return;
   ctx.save();
@@ -199,7 +237,14 @@ function drawTextObject(ctx, t) {
   ctx.font = fontString(t);
   ctx.textBaseline = "middle";
 
-  if (t.shadow && t.shadow.enabled) {
+  if (t.bg) {
+    const { w, h } = textLocalBounds(ctx, t);
+    const pad = t.size * 0.08;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(-w / 2 - pad, -h / 2 - pad * 0.5, w + pad * 2, h + pad);
+  }
+
+  if (t.shadow && t.shadow.enabled && !t.bg) {
     const rad = (t.shadow.angle * Math.PI) / 180;
     ctx.shadowOffsetX = Math.cos(rad) * t.shadow.distance;
     ctx.shadowOffsetY = Math.sin(rad) * t.shadow.distance;
@@ -331,6 +376,8 @@ export function renderCanvas(ctx, state, canvasW, canvasH, opts = {}) {
 
     if (lifted) ctx.restore();
   });
+
+  if (state.labelStyle) drawCellLabels(ctx, cells, state.labelStyle);
 
   for (const t of state.texts) {
     if (!forExport && editingTextId && t.id === editingTextId) continue;

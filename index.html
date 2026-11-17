@@ -175,6 +175,13 @@
         </g>
       </svg>
     </button>
+    <button class="tab-btn icon-tab" data-panel="panel-bg" title="文字背景">
+      <svg viewBox="0 0 200 200" class="tab-icon" aria-hidden="true">
+        <rect x="14" y="48" width="172" height="104" rx="14" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="48" y1="86" x2="152" y2="86" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round"/>
+        <line x1="48" y1="116" x2="116" y2="116" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round"/>
+      </svg>
+    </button>
   </nav>
 
   <input type="file" id="fileInput" accept="image/*" multiple hidden>
@@ -289,6 +296,12 @@
           <label>不透明度 <span id="shadowOpacityVal">60</span>%</label>
           <input type="range" id="shadowOpacitySlider" min="0" max="100" value="60">
         </div>
+      </div>
+    </div>
+
+    <div id="panel-bg" class="panel">
+      <div class="text-add-row">
+        <label class="secondary-btn shadow-add-btn"><span id="textBgLabel">＋文字背景を適用</span><input type="checkbox" id="textBgToggle"></label>
       </div>
     </div>
 

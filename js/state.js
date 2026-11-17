@@ -37,6 +37,7 @@ export function defaultTextObj(canvasW, canvasH, orientation = "horizontal") {
     align: "left",
     orientation, // 'horizontal' | 'vertical'
     rotation: 0, // no longer user-editable; kept at 0
+    bg: false, // white box behind the text (mutually exclusive with drop shadow)
     opacity: 100,
     lineHeight: 1.2,
     letterSpacing: 30,
@@ -57,6 +58,7 @@ export function createDefaultState(count, ratioId) {
     bgColor: "#ffffff",
     spacing: 25,
     cornerRadius: 30,
+    labelStyle: null, // null | "circle" | "shadow" - A/B/C... corner labels (template-driven, fixed position)
     layoutVariant: 0, // 0 = standard grid; 1 = alternate (only meaningful for counts 2/6/8)
     photos: Array.from({ length: count }, defaultPhotoSlotData),
     texts: [],

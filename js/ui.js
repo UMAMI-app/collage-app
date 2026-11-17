@@ -6,7 +6,7 @@
 
 import { ASPECT_RATIOS, ALT_LAYOUTS, canvasPixelSize } from "./layout.js";
 import { imageRegistry, defaultTextObj, resizePhotoSlots } from "./state.js";
-import { listTemplates, saveTemplate, deleteTemplate, applyTemplateToState } from "./templates.js";
+import { listTemplates, BUILTIN_TEMPLATES, saveTemplate, deleteTemplate, applyTemplateToState } from "./templates.js";
 import { exportJPEG } from "./export.js";
 
 const $ = (id) => document.getElementById(id);
@@ -517,7 +517,20 @@ function wireTextProps(state, requestRender) {
     const t = currentText(state); if (!t) return;
     state.beginChange();
     t.shadow.enabled = e.target.checked;
+    if (t.shadow.enabled) t.bg = false; // shadow and white box are mutually exclusive
     syncShadowAddLabel(e.target.checked);
+    state.notify(); requestRender();
+  });
+
+  $("textBgToggle").addEventListener("change", (e) => {
+    const t = currentText(state); if (!t) return;
+    state.beginChange();
+    t.bg = e.target.checked;
+    if (t.bg) {
+      t.shadow.enabled = false;
+      // white text on a white box would vanish, so flip to black
+      if ((t.color || "").toLowerCase() === "#ffffff") t.color = "#000000";
+    }
     state.notify(); requestRender();
   });
 
@@ -582,6 +595,10 @@ function syncFontButtons(font) {
 
 function syncShadowAddLabel(enabled) {
   $("shadowAddLabel").textContent = enabled ? "−ドロップシャドウ削除" : "＋ドロップシャドウ追加";
+}
+
+function syncTextBgLabel(enabled) {
+  $("textBgLabel").textContent = enabled ? "−文字背景を削除" : "＋文字背景を適用";
 }
 
 function currentText(state) {
@@ -666,6 +683,22 @@ function renderTemplateList(state, requestRender) {
   const list = $("templateList");
   list.innerHTML = "";
   const templates = listTemplates();
+  BUILTIN_TEMPLATES.forEach((tpl) => {
+    const row = document.createElement("div");
+    row.className = "template-row";
+    const span = document.createElement("span");
+    span.textContent = tpl.name;
+    row.appendChild(span);
+    const applyBtn = document.createElement("button");
+    applyBtn.textContent = "適用";
+    applyBtn.addEventListener("click", () => {
+      applyTemplateToState(state, tpl);
+      requestRender();
+      $("templateModal").hidden = true;
+    });
+    row.appendChild(applyBtn);
+    list.appendChild(row);
+  });
   if (!templates.length) {
     const empty = document.createElement("div");
     empty.className = "hint";
@@ -750,6 +783,8 @@ export function syncAllFromState(state) {
       $("shadowToggle").checked = t.shadow.enabled;
       $("shadowProps").hidden = !t.shadow.enabled;
       syncShadowAddLabel(t.shadow.enabled);
+      $("textBgToggle").checked = !!t.bg;
+      syncTextBgLabel(!!t.bg);
       $("shadowColorPicker").value = t.shadow.color;
       $("shadowDistSlider").value = t.shadow.distance; $("shadowDistVal").textContent = t.shadow.distance;
       $("shadowBlurSlider").value = t.shadow.blur; $("shadowBlurVal").textContent = t.shadow.blur;
