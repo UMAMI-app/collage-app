@@ -151,8 +151,21 @@ export function attachGestures(canvas, ctx, state, callbacks) {
     }
   }
 
+  /** Drop every piece of in-flight gesture state. Used when a fresh primary
+   *  touch begins (so a pointerup/cancel that was swallowed - by iOS system
+   *  gestures, the keyboard/blur, a modal, etc. - can never leave ghost
+   *  pointers behind that make later touches look like a 2-finger gesture). */
+  function resetGestureState() {
+    if (gesture && gesture.longPressTimer) clearTimeout(gesture.longPressTimer);
+    if (gesture && gesture.lifted) onLiftChange(null);
+    gesture = null;
+    pointers.clear();
+    setManipulating(false);
+  }
+
   function onPointerDown(evt) {
-    canvas.setPointerCapture(evt.pointerId);
+    if (evt.isPrimary || pointers.size === 0) resetGestureState();
+    try { canvas.setPointerCapture(evt.pointerId); } catch (e) {}
     const pt = toCanvasXY(evt);
     pointers.set(evt.pointerId, pt);
 
@@ -291,7 +304,7 @@ export function attachGestures(canvas, ctx, state, callbacks) {
     pointers.delete(evt.pointerId);
     try { canvas.releasePointerCapture(evt.pointerId); } catch (e) {}
 
-    if (!gesture) return;
+    if (!gesture) { if (pointers.size === 0) setManipulating(false); return; }
 
     if (pointers.size === 1) {
       // dropped from pinch (2->1): rebase remaining pointer as a fresh drag origin
@@ -317,6 +330,9 @@ export function attachGestures(canvas, ctx, state, callbacks) {
   }
 
   function finishGesture(g) {
+    // A pinch that never turned into a drag leaves the "manipulating" flag on;
+    // always clear it once every finger is up.
+    if (!(g.kind === "photo" && g.longPressFired && g.lifted)) setManipulating(false);
     if (g.kind === "empty-tap" && !g.moved) {
       onEmptyCellTap(g.index);
       return;
@@ -381,19 +397,19 @@ export function attachGestures(canvas, ctx, state, callbacks) {
 
   function onPointerCancel(evt) {
     pointers.delete(evt.pointerId);
-    if (gesture && gesture.kind === "photo") {
-      clearTimeout(gesture.longPressTimer);
-      if (gesture.lifted) onLiftChange(null);
-      setManipulating(false);
-    }
-    if (gesture && gesture.kind === "text") clearTimeout(gesture.longPressTimer);
-    gesture = null;
+    if (pointers.size > 0) return; // other fingers still down: keep going
+    resetGestureState();
+    onRequestRender();
   }
 
   canvas.addEventListener("pointerdown", onPointerDown);
   canvas.addEventListener("pointermove", onPointerMove);
   canvas.addEventListener("pointerup", onPointerUp);
   canvas.addEventListener("pointercancel", onPointerCancel);
+  canvas.addEventListener("lostpointercapture", (evt) => {
+    if (pointers.has(evt.pointerId)) onPointerUp(evt);
+  });
+  window.addEventListener("blur", () => { resetGestureState(); onRequestRender(); });
 
   return () => {
     canvas.removeEventListener("pointerdown", onPointerDown);

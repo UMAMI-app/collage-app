@@ -697,6 +697,8 @@ function renderTemplateList(state, requestRender) {
       $("templateModal").hidden = true;
     });
     row.appendChild(applyBtn);
+    row.style.cursor = "pointer";
+    row.addEventListener("click", () => applyBtn.click());
     list.appendChild(row);
   });
   if (!templates.length) {
@@ -725,12 +727,15 @@ function renderTemplateList(state, requestRender) {
     const delBtn = document.createElement("button");
     delBtn.className = "danger";
     delBtn.textContent = "削除";
-    delBtn.addEventListener("click", () => {
+    delBtn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
       deleteTemplate(tpl.id);
       renderTemplateList(state, requestRender);
     });
     row.appendChild(delBtn);
 
+    row.style.cursor = "pointer";
+    row.addEventListener("click", () => applyBtn.click());
     list.appendChild(row);
   });
 }

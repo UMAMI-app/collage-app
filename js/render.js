@@ -241,7 +241,8 @@ function drawTextObject(ctx, t) {
     const { w, h } = textLocalBounds(ctx, t);
     const pad = t.size * 0.08;
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(-w / 2 - pad, -h / 2 - pad * 0.5, w + pad * 2, h + pad);
+    const dy = t.orientation === "vertical" ? 0 : t.size * 0.09;
+    ctx.fillRect(-w / 2 - pad, -h / 2 - pad * 0.5 + dy, w + pad * 2, h + pad);
   }
 
   if (t.shadow && t.shadow.enabled && !t.bg) {
