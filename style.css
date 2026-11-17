@@ -300,7 +300,7 @@ button { font-family: inherit; }
   border-top: 2px solid transparent;
 }
 .tab-btn.active { color: var(--text); border-top-color: var(--accent); }
-.tab-icon { width: 26px; height: 26px; display: block; }
+.tab-icon { width: 22px; height: 22px; display: block; }
 /* テキスト/ドロップシャドウ icons are text-glyph shapes that read visually
    smaller than the stroke-based レイアウト/フレーム icons at the same box
    size, so they get a ~150% bump to look balanced in the row. */

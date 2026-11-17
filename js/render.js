@@ -212,7 +212,10 @@ function drawCellLabels(ctx, cells, style) {
       ctx.fillStyle = "#000000";
       ctx.font = `600 ${d * 0.62}px ${labelFont}`;
       ctx.textAlign = "center";
-      ctx.fillText(letter, cx, cy + d * 0.03);
+      // center the glyph's actual ink in the circle (not the em box)
+      ctx.textBaseline = "alphabetic";
+      const lm = ctx.measureText(letter);
+      ctx.fillText(letter, cx, cy + (lm.actualBoundingBoxAscent - lm.actualBoundingBoxDescent) / 2);
     } else {
       const fs = m * 0.24;
       const inset = m * 0.045;
@@ -241,8 +244,24 @@ function drawTextObject(ctx, t) {
     const { w, h } = textLocalBounds(ctx, t);
     const pad = t.size * 0.08;
     ctx.fillStyle = "#ffffff";
-    const dy = t.orientation === "vertical" ? 0 : t.size * 0.09;
-    ctx.fillRect(-w / 2 - pad, -h / 2 - pad * 0.5 + dy, w + pad * 2, h + pad);
+    if (t.orientation === "vertical") {
+      ctx.fillRect(-w / 2 - pad, -h / 2 - pad * 0.5, w + pad * 2, h + pad);
+    } else {
+      // Fit the box to the real glyph ink (not the em box), so the text sits
+      // vertically centered inside it whatever the font's metrics are.
+      const ls = (t.content || "").split("\n");
+      const pitch = t.size * t.lineHeight;
+      const y0 = -((ls.length - 1) * pitch) / 2;
+      let top = Infinity, bottom = -Infinity;
+      ls.forEach((line, i) => {
+        const m = ctx.measureText(line || "あ");
+        const y = y0 + i * pitch;
+        top = Math.min(top, y - m.actualBoundingBoxAscent);
+        bottom = Math.max(bottom, y + m.actualBoundingBoxDescent);
+      });
+      const vpad = t.size * 0.14;
+      ctx.fillRect(-w / 2 - pad, top - vpad, w + pad * 2, bottom - top + vpad * 2);
+    }
   }
 
   if (t.shadow && t.shadow.enabled && !t.bg) {
